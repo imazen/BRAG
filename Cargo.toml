@@ -28,6 +28,10 @@ zenresize = { path = "../zenresize" }
 imgref = "1"
 rgb = "0.8"
 enough = "0.4.3"
+zune-png = "0.5.2"
+zune-jpeg = "0.5.15"
+zune-core = "0.5"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [[bench]]
 name = "compositing"
