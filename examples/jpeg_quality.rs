@@ -73,6 +73,20 @@ fn encode_mozjpeg(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
     started.finish().unwrap()
 }
 
+fn encode_zenjpeg_fixed(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
+    let config = zenjpeg::encoder::EncoderConfig::ycbcr(
+        quality,
+        zenjpeg::encoder::ChromaSubsampling::Quarter,
+    )
+    .progressive(false)
+    .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
+    let mut enc = config
+        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
+        .unwrap();
+    enc.push_packed(rgb, Unstoppable).unwrap();
+    enc.finish().unwrap()
+}
+
 fn encode_jpeg_encoder(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
     let mut buf = Vec::new();
     let encoder = jpeg_encoder::Encoder::new(&mut buf, quality);
@@ -87,48 +101,103 @@ fn main() {
     let source_img = rgb_to_imgref(&source, W as usize, H as usize);
     let params = butteraugli::ButteraugliParams::default();
 
-    println!("encoder\tquality\tsize_bytes\tsize_kb\tbutteraugli");
+    // Encoders to test: (name, encode_fn)
+    type EncodeFn = fn(&[u8], u32, u32, u8) -> Vec<u8>;
+    let encoders: &[(&str, EncodeFn)] = &[
+        ("zenjpeg", encode_zenjpeg),
+        ("zenjpeg-fixed", encode_zenjpeg_fixed),
+        ("mozjpeg", encode_mozjpeg),
+        ("jpeg-encoder", encode_jpeg_encoder),
+    ];
 
     let qualities = [60, 70, 75, 80, 85, 90, 95];
 
-    for &q in &qualities {
-        // zenjpeg
-        let jpeg = encode_zenjpeg(&source, W, H, q);
-        let decoded = decode_jpeg_to_rgb(&jpeg);
-        let decoded_img = rgb_to_imgref(&decoded, W as usize, H as usize);
-        let score = butteraugli::butteraugli(source_img.as_ref(), decoded_img.as_ref(), &params)
-            .unwrap()
-            .score;
-        println!(
-            "zenjpeg\t{q}\t{}\t{:.1}\t{score:.4}",
-            jpeg.len(),
-            jpeg.len() as f64 / 1024.0
-        );
+    // TSV for scripts
+    eprintln!("encoder\tquality\tsize_bytes\tsize_kb\tbutteraugli");
 
-        // mozjpeg
-        let jpeg = encode_mozjpeg(&source, W, H, q);
-        let decoded = decode_jpeg_to_rgb(&jpeg);
-        let decoded_img = rgb_to_imgref(&decoded, W as usize, H as usize);
-        let score = butteraugli::butteraugli(source_img.as_ref(), decoded_img.as_ref(), &params)
-            .unwrap()
-            .score;
-        println!(
-            "mozjpeg\t{q}\t{}\t{:.1}\t{score:.4}",
-            jpeg.len(),
-            jpeg.len() as f64 / 1024.0
-        );
-
-        // jpeg-encoder
-        let jpeg = encode_jpeg_encoder(&source, W, H, q);
-        let decoded = decode_jpeg_to_rgb(&jpeg);
-        let decoded_img = rgb_to_imgref(&decoded, W as usize, H as usize);
-        let score = butteraugli::butteraugli(source_img.as_ref(), decoded_img.as_ref(), &params)
-            .unwrap()
-            .score;
-        println!(
-            "jpeg-encoder\t{q}\t{}\t{:.1}\t{score:.4}",
-            jpeg.len(),
-            jpeg.len() as f64 / 1024.0
-        );
+    // Collect results for markdown table
+    struct Row {
+        encoder: &'static str,
+        quality: u8,
+        size_kb: f64,
+        score: f64,
     }
+    let mut rows = Vec::new();
+
+    for &q in &qualities {
+        for &(name, encode_fn) in encoders {
+            let jpeg = encode_fn(&source, W, H, q);
+            let decoded = decode_jpeg_to_rgb(&jpeg);
+            let decoded_img = rgb_to_imgref(&decoded, W as usize, H as usize);
+            let score =
+                butteraugli::butteraugli(source_img.as_ref(), decoded_img.as_ref(), &params)
+                    .unwrap()
+                    .score;
+            let size_kb = jpeg.len() as f64 / 1024.0;
+            eprintln!("{name}\t{q}\t{}\t{size_kb:.1}\t{score:.4}", jpeg.len());
+            rows.push(Row {
+                encoder: name,
+                quality: q,
+                size_kb,
+                score,
+            });
+        }
+    }
+
+    // Print markdown table (grouped by quality)
+    println!();
+    println!("## JPEG Encoder Quality vs Size (butteraugli, lower = better)");
+    println!();
+    println!(
+        "| Quality | {} |",
+        encoders
+            .iter()
+            .map(|(n, _)| format!("{n} KB | {n} score"))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    );
+    println!(
+        "|---------|{}|",
+        encoders
+            .iter()
+            .map(|_| "--------:|--------:".to_string())
+            .collect::<Vec<_>>()
+            .join("|")
+    );
+
+    for &q in &qualities {
+        let q_rows: Vec<&Row> = rows.iter().filter(|r| r.quality == q).collect();
+        let best_score = q_rows
+            .iter()
+            .map(|r| r.score)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        let best_size = q_rows
+            .iter()
+            .map(|r| r.size_kb)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
+        let mut cells = Vec::new();
+        for r in &q_rows {
+            let size_mark = if (r.size_kb - best_size).abs() < 0.1 {
+                "**"
+            } else {
+                ""
+            };
+            let score_mark = if (r.score - best_score).abs() < 0.001 {
+                "**"
+            } else {
+                ""
+            };
+            cells.push(format!(
+                "{size_mark}{:.0}{size_mark} | {score_mark}{:.2}{score_mark}",
+                r.size_kb, r.score
+            ));
+        }
+        println!("| {q} | {} |", cells.join(" | "));
+    }
+    println!();
+    println!("*Butteraugli score: lower = better perceptual quality.*");
+    println!("*Bold = best in row for that metric.*");
 }
