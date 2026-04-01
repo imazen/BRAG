@@ -109,3 +109,31 @@ pub(super) fn src_over_brag_impl_scalar(t: ScalarToken, src: &[u8], dst: &mut [u
 pub(super) fn src_over_solid_brag_impl_scalar(t: ScalarToken, dst: &mut [u8], color: &[u8; 4]) {
     src_over_solid_brag_row_scalar(t, dst, color);
 }
+
+// ============================================================
+// f32 variants — autoversioned (LLVM vectorizes FMA well)
+//
+// BRAG f32 layout: [B, R, A, G] per pixel, alpha at index 2.
+// ============================================================
+
+#[autoversion(v3, neon, wasm128)]
+pub(super) fn src_over_brag_f32_impl(src: &[f32], dst: &mut [f32]) {
+    for (s, d) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+        let inv_a = 1.0 - s[2]; // BRAG alpha at index 2
+        d[0] = s[0] + d[0] * inv_a;
+        d[1] = s[1] + d[1] * inv_a;
+        d[2] = s[2] + d[2] * inv_a;
+        d[3] = s[3] + d[3] * inv_a;
+    }
+}
+
+#[autoversion(v3, neon, wasm128)]
+pub(super) fn premul_brag_f32_impl(buf: &mut [f32]) {
+    for px in buf.chunks_exact_mut(4) {
+        let a = px[2]; // BRAG alpha at index 2
+        px[0] *= a;
+        px[1] *= a;
+        // px[2] = alpha unchanged
+        px[3] *= a;
+    }
+}

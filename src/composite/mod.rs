@@ -121,3 +121,35 @@ pub fn src_over_solid(dst: &mut [u8], color: crate::Bra<u8>) -> Result<(), Compo
     );
     Ok(())
 }
+
+// ── f32 variants ───────────────────────────────────────────────────
+
+/// Porter-Duff SrcOver on premultiplied f32 BRAG pixels.
+///
+/// Each pixel is 4 contiguous `f32` values in BRAG order: `[B, R, A, G]`.
+/// Alpha is at index 2 (the third float per pixel).
+///
+/// Formula: `dst' = src + dst × (1.0 − src.A)`
+///
+/// Autoversioned: LLVM auto-vectorizes this to AVX/NEON/WASM SIMD.
+pub fn src_over_f32(src: &[f32], dst: &mut [f32]) -> Result<(), CompositeError> {
+    if src.is_empty() || src.len() % 4 != 0 {
+        return Err(CompositeError::NotPixelAligned);
+    }
+    if dst.len() < src.len() {
+        return Err(CompositeError::LengthMismatch);
+    }
+    src_over_brag_f32_impl(src, dst);
+    Ok(())
+}
+
+/// Premultiply straight-alpha f32 BRAG pixels in place.
+///
+/// Alpha at index 2 per pixel. `C' = C * A` for B, R, G channels.
+pub fn premultiply_f32(buf: &mut [f32]) -> Result<(), CompositeError> {
+    if buf.is_empty() || buf.len() % 4 != 0 {
+        return Err(CompositeError::NotPixelAligned);
+    }
+    premul_brag_f32_impl(buf);
+    Ok(())
+}
