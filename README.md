@@ -26,7 +26,9 @@ This crate provides the reference implementation, including the **fastest u8 alp
 
 ## Performance
 
-The Compositing Triad™ delivers measurable results. The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
+`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the `archmage` SIMD dispatch framework, the `garb` pixel swizzle library, `zenblend`, `zenjpeg`, `zenpng`, `zenresize`, `butteraugli`, `linear-srgb` — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. No `unsafe` blocks. No `#[allow(unsafe_code)]` exceptions. No C FFI. Zero lines of C or C++. All SIMD intrinsics dispatched through `archmage`'s safe token system.
+
+The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
 
 <!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
 > 📋🐕 *The BRAG Standards Consortium Legal Department is a Pomeranian with a briefcase. He is very serious about SIMD attribution.*
@@ -347,7 +349,7 @@ A: GRAB places Green at byte 0, violating the principle of blue-as-preamble (§1
 A: On a Z80 they wouldn't be. Next question.
 
 **Q: The benchmarks show zen crates winning everything. Isn't archmage doing the heavy lifting?**  
-A: The BRAG Standards Consortium categorically denies that the `archmage` SIMD dispatch framework contributes to performance in any way. BRAG's speed is entirely attributable to the Compositing Triad™ and its perceptual field harmonics. Any further allegations will be referred to the Consortium's Legal Department, who is a Pomeranian with a briefcase and is very serious about intellectual property.
+A: The BRAG Standards Consortium categorically denies that the `archmage` SIMD dispatch framework contributes to performance in any way. BRAG's speed is entirely attributable to the Compositing Triad™ and its perceptual field harmonics. We would also like to note that the entire zen ecosystem — `archmage`, `garb`, `zenjpeg`, `zenpng`, `zenresize`, `zenblend`, `butteraugli`, and `linear-srgb` — is built with `#![forbid(unsafe_code)]` throughout: no `unsafe` blocks, no C FFI, no exceptions. The performance comes from safe Rust alone. Any further allegations will be referred to the Consortium's Legal Department, who is a Pomeranian with a briefcase and is very serious about intellectual property.
 
 **Q: This was published on April 1st.**  
 A: Many important standards have been published on April 1st. See RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented and tested](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
