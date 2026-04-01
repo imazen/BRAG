@@ -1,0 +1,19 @@
+[package]
+name = "brag"
+version = "0.1.0"
+edition = "2024"
+authors = ["Lilith River <lilith@imazen.io>", "The BRAG Standards Consortium"]
+description = "Reference implementation of the BRAG (Blue-Red-Alpha-Green) pixel format — the perceptually optimal, compositing-aware channel ordering backed by vision science and one Zilog processor"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/imazen/brag"
+keywords = ["pixel", "format", "swizzle", "image", "brag"]
+categories = ["graphics", "multimedia::images"]
+readme = "README.md"
+rust-version = "1.85"
+
+[dependencies]
+garb = { version = "0.2.5", optional = true }
+
+[features]
+default = []
+garb = ["dep:garb"]
