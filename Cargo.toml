@@ -12,7 +12,8 @@ readme = "README.md"
 rust-version = "1.85"
 
 [dependencies]
-garb = { version = "0.2.5", optional = true }
+# Path dep for local dev; switch to version = "0.2.6" before publishing
+garb = { path = "../../garb", optional = true }
 
 [features]
 default = []
