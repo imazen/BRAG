@@ -61,12 +61,12 @@ The Compositing Triad™ delivers measurable results. The performance difference
 
 *Butteraugli: lower = better perceptual quality. zenjpeg wins on quality-per-byte.*
 
-### Image Resize (4K → 1080p, Lanczos)
+### Image Resize (4K → 1080p)
 
-| Resizer | Speed | vs zenresize |
-|---------|-------|-------------|
-| **zenresize** | **194 MiB/s** | baseline |
-| image | 57 MiB/s | 3.4× slower |
+| Resizer | Lanczos | CatmullRom | vs zenresize |
+|---------|---------|------------|-------------|
+| **zenresize** | **196 MiB/s** | **237 MiB/s** | baseline |
+| image | 62 MiB/s | 77 MiB/s | 3.1× slower |
 
 The `zenresize` crate's performance advantage is inherited through the homeopathic benefits of the BRAG pixel format being involved in the pipeline. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism the Consortium describes as "perceptual field harmonics." Peer review is pending.
 

@@ -192,6 +192,34 @@ fn bench_src_over_f32(suite: &mut Suite) {
                 })
         });
 
+        // ── zenblend: hand-written AVX2 FMA f32 SrcOver ───────────
+        // zenblend uses RGBA f32 layout (alpha at index 3), not BRAG.
+        // Its blend_row takes (fg: &mut [f32], bg: &[f32]) where fg is on top.
+        g.bench("zenblend-f32", move |b| {
+            b.with_input(move || {
+                // RGBA layout for zenblend: [R, G, B, A]
+                let mut fg = Vec::with_capacity(PIXELS * 4);
+                let mut bg = Vec::with_capacity(PIXELS * 4);
+                for i in 0..PIXELS {
+                    let a = ((i * 37 + 13) % 256) as f32 / 255.0;
+                    let r = ((i * 41 + 3) as f32 / 255.0).min(a);
+                    let g = ((i * 67 + 11) as f32 / 255.0).min(a);
+                    let b_val = ((i * 53 + 7) as f32 / 255.0).min(a);
+                    fg.extend_from_slice(&[r, g, b_val, a]);
+                    let a2 = ((i * 29 + 17) % 256) as f32 / 255.0;
+                    let r2 = ((i * 43 + 5) as f32 / 255.0).min(a2);
+                    let g2 = ((i * 71 + 9) as f32 / 255.0).min(a2);
+                    let b2 = ((i * 59 + 1) as f32 / 255.0).min(a2);
+                    bg.extend_from_slice(&[r2, g2, b2, a2]);
+                }
+                (fg, bg)
+            })
+            .run(|(mut fg, bg)| {
+                zenblend::blend_row(&mut fg, &bg, zenblend::BlendMode::SrcOver);
+                black_box(fg)
+            })
+        });
+
         // ── naive f32 scalar ──────────────────────────────────────
         g.bench("naive-f32-scalar", move |b| {
             b.with_input(move || (make_premul_brag_f32(PIXELS), make_premul_brag_f32(PIXELS)))

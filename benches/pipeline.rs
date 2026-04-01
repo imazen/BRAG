@@ -479,44 +479,53 @@ fn bench_resize(suite: &mut Suite) {
     let out_h = 1080u32;
     let out_bytes = (out_w as u64) * (out_h as u64) * 4;
 
-    let r1 = rgba_4k.clone();
-    let r2 = rgba_4k.clone();
+    // Test both Lanczos and CatmullRom filters
+    for (zen_filter, img_filter, label) in [
+        (
+            zenresize::Filter::Lanczos,
+            image::imageops::FilterType::Lanczos3,
+            "lanczos",
+        ),
+        (
+            zenresize::Filter::CatmullRom,
+            image::imageops::FilterType::CatmullRom,
+            "catmull_rom",
+        ),
+    ] {
+        let r1 = rgba_4k.clone();
+        let r2 = rgba_4k.clone();
 
-    suite.group("resize_4k_to_1080p_lanczos", move |g| {
-        g.throughput(Throughput::Bytes(out_bytes));
-        g.baseline("zenresize");
+        suite.group(format!("resize_4k_to_1080p_{label}"), move |g| {
+            g.throughput(Throughput::Bytes(out_bytes));
+            g.baseline("zenresize");
 
-        g.bench("zenresize", move |b| {
-            let pixels = r1.clone();
-            b.iter(move || {
-                let config = zenresize::ResizeConfig::builder(JPEG_W, JPEG_H, out_w, out_h)
-                    .filter(zenresize::Filter::Lanczos)
-                    .format(zenresize::PixelDescriptor::RGBA8_SRGB)
-                    .build();
-                let mut resizer = zenresize::Resizer::new(&config);
-                black_box(resizer.resize(&pixels))
-            })
+            g.bench("zenresize", move |b| {
+                let pixels = r1.clone();
+                b.iter(move || {
+                    let config = zenresize::ResizeConfig::builder(JPEG_W, JPEG_H, out_w, out_h)
+                        .filter(zen_filter)
+                        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
+                        .build();
+                    let mut resizer = zenresize::Resizer::new(&config);
+                    black_box(resizer.resize(&pixels))
+                })
+            });
+
+            g.bench("image", move |b| {
+                let pixels = r2.clone();
+                b.iter(move || {
+                    let img = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+                        JPEG_W,
+                        JPEG_H,
+                        (*pixels).clone(),
+                    )
+                    .unwrap();
+                    let resized = image::imageops::resize(&img, out_w, out_h, img_filter);
+                    black_box(resized.into_raw())
+                })
+            });
         });
-
-        g.bench("image", move |b| {
-            let pixels = r2.clone();
-            b.iter(move || {
-                let img = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-                    JPEG_W,
-                    JPEG_H,
-                    (*pixels).clone(),
-                )
-                .unwrap();
-                let resized = image::imageops::resize(
-                    &img,
-                    out_w,
-                    out_h,
-                    image::imageops::FilterType::Lanczos3,
-                );
-                black_box(resized.into_raw())
-            })
-        });
-    });
+    }
 }
 
 zenbench::main!(

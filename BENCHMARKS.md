@@ -28,9 +28,10 @@ All benchmarks run with `zenbench` on the same machine. No `-C target-cpu=native
 
 | Compositor | Mean | Throughput | vs brag |
 |------------|------|-----------|---------|
-| **brag-f32** | **1.51 ms** | **10.3 GiB/s** | baseline |
-| naive-f32-scalar | 1.48 ms | 10.6 GiB/s | tied (LLVM auto-vectorizes both) |
-| alpha-blend (f32) | 4.60 ms | 3.4 GiB/s | 3.0x slower |
+| zenblend (hand-written AVX2+FMA) | 1.3 ms | 12.4 GiB/s | 6% faster |
+| **brag-f32** (autoversioned) | **1.3 ms** | **11.7 GiB/s** | baseline |
+| naive-f32-scalar | 1.3 ms | 11.6 GiB/s | tied (LLVM auto-vectorizes) |
+| alpha-blend (f32) | 3.9 ms | 4.0 GiB/s | 2.9x slower |
 
 ### Premultiply — 1024x1024
 

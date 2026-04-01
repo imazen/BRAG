@@ -35,6 +35,7 @@ image = { version = "0.25.10", default-features = false, features = ["png", "jpe
 mozjpeg = "0.10.13"
 jpeg-encoder = "0.7.0"
 butteraugli = { path = "../../butteraugli/butteraugli" }
+zenblend = { path = "../zenblend" }
 
 [[example]]
 name = "jpeg_quality"
