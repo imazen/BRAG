@@ -18,6 +18,14 @@ archmage = { version = "0.9.16", features = ["macros"], optional = true }
 
 [dev-dependencies]
 archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }
+zenbench = "0.1.2"
+sw-composite = "0.7.16"
+alpha-blend = "0.1.2"
+
+[[bench]]
+name = "compositing"
+harness = false
+required-features = ["composite"]
 
 [features]
 default = []
