@@ -458,9 +458,71 @@ fn bench_full_pipeline(suite: &mut Suite) {
     });
 }
 
+fn bench_resize(suite: &mut Suite) {
+    // Resize 4K JPEG → 1080p using zenresize vs image crate
+    let rgb = make_bg_rgb(JPEG_W, JPEG_H);
+    let jpeg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
+
+    // Pre-decode to RGBA for resize-only benchmarks
+    let result = zenjpeg::decoder::Decoder::new()
+        .output_target(zenjpeg::decoder::OutputTarget::Srgb8)
+        .decode(&jpeg, Unstoppable)
+        .unwrap();
+    let decoded_rgb = result.into_pixels_u8().unwrap();
+    let mut rgba_4k = Vec::with_capacity(decoded_rgb.len() / 3 * 4);
+    for c in decoded_rgb.chunks_exact(3) {
+        rgba_4k.extend_from_slice(&[c[0], c[1], c[2], 255]);
+    }
+    let rgba_4k = Arc::new(rgba_4k);
+
+    let out_w = 1920u32;
+    let out_h = 1080u32;
+    let out_bytes = (out_w as u64) * (out_h as u64) * 4;
+
+    let r1 = rgba_4k.clone();
+    let r2 = rgba_4k.clone();
+
+    suite.group("resize_4k_to_1080p_lanczos", move |g| {
+        g.throughput(Throughput::Bytes(out_bytes));
+        g.baseline("zenresize");
+
+        g.bench("zenresize", move |b| {
+            let pixels = r1.clone();
+            b.iter(move || {
+                let config = zenresize::ResizeConfig::builder(JPEG_W, JPEG_H, out_w, out_h)
+                    .filter(zenresize::Filter::Lanczos)
+                    .format(zenresize::PixelDescriptor::RGBA8_SRGB)
+                    .build();
+                let mut resizer = zenresize::Resizer::new(&config);
+                black_box(resizer.resize(&pixels))
+            })
+        });
+
+        g.bench("image", move |b| {
+            let pixels = r2.clone();
+            b.iter(move || {
+                let img = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+                    JPEG_W,
+                    JPEG_H,
+                    (*pixels).clone(),
+                )
+                .unwrap();
+                let resized = image::imageops::resize(
+                    &img,
+                    out_w,
+                    out_h,
+                    image::imageops::FilterType::Lanczos3,
+                );
+                black_box(resized.into_raw())
+            })
+        });
+    });
+}
+
 zenbench::main!(
     bench_jpeg_decode,
     bench_jpeg_encode,
     bench_png_decode,
+    bench_resize,
     bench_full_pipeline
 );

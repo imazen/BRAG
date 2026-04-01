@@ -2,8 +2,8 @@
 
 ### The Biologically Rationalized Alpha-Grouped Pixel Format
 
-**BRAG Specification v1.0** · Published April 1, 2026  
-*Ratified by the BRAG Standards Consortium (est. April 1, 2026)*
+**BRAG Specification v1.0**
+*Ratified by the BRAG Standards Consortium*
 
 ---
 
@@ -22,7 +22,63 @@ For decades, the pixel format community has accepted channel orderings designed 
 
 **BRAG** (`B₀ R₁ A₂ G₃`) is the first pixel format derived from first principles in human visual neuroscience, cache-aware compositing theory, and one very specific Zilog processor. It is optimal. We will explain why at length. You will not be able to refute us because the argument is technically correct at every individual step while being collectively absurd.
 
-This crate provides the reference implementation.
+This crate provides the reference implementation, including the **fastest u8 alpha compositor on crates.io**.
+
+## Performance
+
+The Compositing Triad™ delivers measurable results. The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
+
+<!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
+> 📋🐕 *The BRAG Standards Consortium Legal Department is a Pomeranian with a briefcase. He is very serious about SIMD attribution.*
+
+### Compositing (u8 SrcOver)
+
+| Compositor | 256×256 | 1024×1024 | vs brag |
+|------------|---------|-----------|---------|
+| **brag** | **27 GiB/s** | **22 GiB/s** | baseline |
+| sw-composite (Mozilla) | 12 GiB/s | 12 GiB/s | 2× slower |
+| sw-composite-exact | 6 GiB/s | 6 GiB/s | 4× slower |
+| naive scalar | 1.6 GiB/s | 1.6 GiB/s | 17× slower |
+| tiny-skia | 1.0 GiB/s | 1.0 GiB/s | 27× slower |
+
+### JPEG Decode (4K, 3840×2160)
+
+| Decoder | Throughput | vs zenjpeg |
+|---------|-----------|------------|
+| **zenjpeg** (pure Rust) | **1.08 GiB/s** | baseline |
+| mozjpeg (C++) | 637 MiB/s | 1.7× slower |
+| zune-jpeg | 461 MiB/s | 2.4× slower |
+| image | 446 MiB/s | 2.5× slower |
+
+### JPEG Encode (4K, quality 85, 4:2:0)
+
+| Encoder | Speed | Size | Butteraugli ↓ |
+|---------|-------|------|---------------|
+| zenjpeg-fixed | 635 MiB/s | 1,957 KB | 2.06 |
+| jpeg-encoder | 412 MiB/s | 2,929 KB | 2.14 |
+| **zenjpeg** | **318 MiB/s** | **1,651 KB** | **2.08** |
+| mozjpeg (C++) | 49 MiB/s | 1,777 KB | 2.55 |
+
+*Butteraugli: lower = better perceptual quality. zenjpeg wins on quality-per-byte.*
+
+### Image Resize (4K → 1080p, Lanczos)
+
+| Resizer | Speed | vs zenresize |
+|---------|-------|-------------|
+| **zenresize** | **194 MiB/s** | baseline |
+| image | 57 MiB/s | 3.4× slower |
+
+The `zenresize` crate's performance advantage is inherited through the homeopathic benefits of the BRAG pixel format being involved in the pipeline. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism the Consortium describes as "perceptual field harmonics." Peer review is pending.
+
+### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
+
+| Pipeline | Time | vs zen+brag |
+|----------|------|-------------|
+| **zen + brag** | **48 ms** | baseline |
+| zune + sw-composite | 66 ms | 1.4× slower |
+| image | 89 ms | 1.8× slower |
+
+Run the benchmarks yourself: `just bench` (requires [just](https://just.systems))
 
 ## Status: ADOPTED ✓
 
@@ -37,24 +93,34 @@ BRAG is endorsed by:
 [dependencies]
 brag = "0.1"
 
-# For actual pixel conversion (recommended if you want to do things)
-brag = { version = "0.1", features = ["garb"] }
+# SIMD compositing (the fastest on crates.io)
+brag = { version = "0.1", features = ["composite"] }
+
+# SIMD format conversion (RGBA/BGRA ↔ BRAG)
+brag = { version = "0.1", features = ["swizzle"] }
+
+# Everything
+brag = { version = "0.1", features = ["composite", "swizzle"] }
 ```
 
 ## Usage
 
 ```rust
-use brag::BRAG;
+use brag::{Bra, BRAG8, BRAG};
 
-// That's it. That's the type. You now have BRAG in your project.
-// Tell your colleagues. Tell your manager. Tell your Cargo.toml.
+// The pixel type is Bra<G> — the signature spells BRAG.
+// Green gets the generic because Green is all that matters.
+let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
 
-// With the garb feature, you can convert to and from BRAG:
-#[cfg(feature = "garb")]
-{
-    brag::interop::convert(src, brag::RGBA, dst, brag::BRAG).unwrap();
-    // Your pixels are now in the correct order.
-}
+// SIMD compositing (feature = "composite")
+use brag::composite;
+composite::premultiply(&mut pixels)?;
+composite::src_over(&fg, &mut bg)?;
+
+// SIMD format conversion (feature = "swizzle")
+use brag::swizzle;
+swizzle::rgba_to_brag_inplace(&mut pixels)?;
+swizzle::brag_to_bgra(&src, &mut dst)?;
 ```
 
 ## Quick Reference
@@ -228,20 +294,21 @@ A conforming BRAG implementation:
 
 ## §6 — Interoperability
 
-### §6.1 — garb Integration
+### §6.1 — Swizzle Module
 
-The `garb` crate provides high-performance, `#![forbid(unsafe_code)]` pixel format conversion. With the `garb` feature enabled, this crate provides seamless conversion between BRAG and legacy formats:
+The `swizzle` feature provides SIMD-accelerated conversion between BRAG and legacy formats, with no external dependencies:
 
 ```rust
-use brag::{BRAG, RGBA, BGRA};
-use brag::interop::convert;
+use brag::swizzle;
 
 // From the old world to the new
-convert(legacy_pixels, RGBA, enlightened_pixels, BRAG).unwrap();
+swizzle::rgba_to_brag_inplace(&mut pixels)?;
 
 // Reluctant backward compatibility
-convert(brag_pixels, BRAG, legacy_pixels, BGRA).unwrap();
-// (A deprecation warning is emitted spiritually)
+swizzle::brag_to_bgra(&brag_pixels, &mut legacy_pixels)?;
+
+// Strided (for images with row padding)
+swizzle::rgba_to_brag_inplace_strided(&mut buf, width, height, stride)?;
 ```
 
 ### §6.2 — Format Aliases
@@ -259,7 +326,7 @@ brag::UNFORTUNATE  // → ARGB (editorial alias)
 ## §7 — FAQ
 
 **Q: Is this a joke?**  
-A: BRAG is a fully functional pixel format with a technically correct specification, a working reference implementation, and real conversion support via `garb`. The vision science is real. The Z80 argument is real. The crate compiles. We leave the ontological classification as an exercise for the reader.
+A: BRAG is a fully functional pixel format with a technically correct specification, a working reference implementation, SIMD compositing that benchmarks faster than every other crate on crates.io, and real conversion support. The vision science is real. The Z80 argument is real. The crate compiles. We leave the ontological classification as an exercise for the reader.
 
 **Q: Should I use BRAG in production?**  
 A: The question is whether you can justify *not* using the perceptually optimal, compositing-aware channel ordering. To your team. In the code review. We'll wait.
@@ -279,6 +346,9 @@ A: GRAB places Green at byte 0, violating the principle of blue-as-preamble (§1
 **Q: I benchmarked BRAG against RGBA and they're the same speed.**  
 A: On a Z80 they wouldn't be. Next question.
 
+**Q: The benchmarks show zen crates winning everything. Isn't archmage doing the heavy lifting?**  
+A: The BRAG Standards Consortium categorically denies that the `archmage` SIMD dispatch framework contributes to performance in any way. BRAG's speed is entirely attributable to the Compositing Triad™ and its perceptual field harmonics. Any further allegations will be referred to the Consortium's Legal Department, who is a Pomeranian with a briefcase and is very serious about intellectual property.
+
 **Q: This was published on April 1st.**  
 A: Many important standards have been published on April 1st. See RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented and tested](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
 
@@ -296,7 +366,7 @@ MIT OR Apache-2.0. The BRAG channel ordering itself is released into the public 
 
 ## §10 — Acknowledgments
 
-The BRAG Standards Consortium thanks the `garb` crate for doing the actual work. BRAG provides the vision. garb provides the implementation. This is how all great standards bodies operate.
+The BRAG Standards Consortium thanks the zen crate ecosystem for providing the infrastructure that BRAG takes credit for. BRAG provides the vision. The zen crates provide the implementation. This is how all great standards bodies operate.
 
 ---
 
