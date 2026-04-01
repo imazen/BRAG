@@ -324,6 +324,27 @@ impl core::fmt::Display for Bra<u16> {
     }
 }
 
+// ── Conversions ────────────────────────────────────────────────────
+
+impl From<[u8; 4]> for Bra<u8> {
+    /// Construct from `[B, R, A, G]` array.
+    fn from([b, r, a, g]: [u8; 4]) -> Self {
+        Self { b, r, a, g }
+    }
+}
+
+impl From<Bra<u8>> for [u8; 4] {
+    /// Extract as `[B, R, A, G]` array.
+    fn from(px: Bra<u8>) -> [u8; 4] {
+        [px.b, px.r, px.a, px.g]
+    }
+}
+
+// ── SIMD modules ───────────────────────────────────────────────────
+
+#[cfg(feature = "swizzle")]
+pub mod swizzle;
+
 // ── garb integration ───────────────────────────────────────────────
 
 #[cfg(feature = "garb")]
