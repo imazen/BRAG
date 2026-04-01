@@ -22,11 +22,22 @@ zenbench = "0.1.2"
 sw-composite = "0.7.16"
 alpha-blend = "0.1.2"
 tiny-skia = "0.12.0"
+zenpng = { path = "../zenpng" }
+zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
+zenresize = { path = "../zenresize" }
+imgref = "1"
+rgb = "0.8"
+enough = "0.4.3"
 
 [[bench]]
 name = "compositing"
 harness = false
 required-features = ["composite"]
+
+[[bench]]
+name = "pipeline"
+harness = false
+required-features = ["composite", "swizzle"]
 
 [features]
 default = []
