@@ -1,7 +1,8 @@
-//! Pipeline benchmark: decode → swizzle → composite.
+//! Pipeline benchmark: decode → composite, plus codec comparisons.
 //!
-//! Compares zen crates + brag vs zune-* vs image crate
-//! on the same PNG (512x512 with alpha) and JPEG (3840x2160) source data.
+//! Compares zen+brag vs zune+sw-composite vs image crate pipelines,
+//! plus JPEG encode/decode speed across zenjpeg, mozjpeg, zune-jpeg,
+//! jpeg-encoder, and the image crate.
 //!
 //! Run: cargo bench --bench pipeline --features composite,swizzle
 
@@ -12,14 +13,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 use zenbench::prelude::*;
 
-// ── Image dimensions ───────────────────────────────────────────────
-
 const PNG_W: u32 = 512;
 const PNG_H: u32 = 512;
 const JPEG_W: u32 = 3840;
 const JPEG_H: u32 = 2160;
 
-// ── Test data generation (run once at startup) ─────────────────────
+// ── Test data generation ───────────────────────────────────────────
 
 fn make_fg_rgba(w: u32, h: u32) -> Vec<u8> {
     let n = (w * h) as usize;
@@ -57,24 +56,42 @@ fn encode_test_png(w: u32, h: u32) -> Vec<u8> {
         .collect();
     let img = ImgVec::new(pixels, w as usize, h as usize);
     let mut config = zenpng::EncodeConfig::default();
-    config.compression = zenpng::Compression::Fast; // Level 1 — realistic
+    config.compression = zenpng::Compression::Fast;
     zenpng::encode_rgba8(img.as_ref(), None, &config, &Unstoppable, &Unstoppable).unwrap()
 }
 
-fn encode_test_jpeg(w: u32, h: u32) -> Vec<u8> {
-    let rgb = make_bg_rgb(w, h);
+// ── JPEG encoders (all at quality 85, same source RGB data) ────────
+
+fn encode_jpeg_zenjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let config =
         zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter);
     let mut enc = config
         .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
         .unwrap();
-    enc.push_packed(&rgb, Unstoppable).unwrap();
+    enc.push_packed(rgb, Unstoppable).unwrap();
     enc.finish().unwrap()
+}
+
+fn encode_jpeg_mozjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
+    comp.set_size(w as usize, h as usize);
+    comp.set_quality(85.0);
+    let mut started = comp.start_compress(Vec::new()).unwrap();
+    started.write_scanlines(rgb).unwrap();
+    started.finish().unwrap()
+}
+
+fn encode_jpeg_encoder(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut buf = Vec::new();
+    let encoder = jpeg_encoder::Encoder::new(&mut buf, 85);
+    encoder
+        .encode(rgb, w as u16, h as u16, jpeg_encoder::ColorType::Rgb)
+        .unwrap();
+    buf
 }
 
 // ── Decode helpers ─────────────────────────────────────────────────
 
-/// zen pipeline: decode JPEG → RGB → expand to RGBA → BRAG
 fn zen_decode_jpeg_to_brag(jpeg: &[u8]) -> Vec<u8> {
     let result = zenjpeg::decoder::Decoder::new()
         .output_target(zenjpeg::decoder::OutputTarget::Srgb8)
@@ -89,7 +106,6 @@ fn zen_decode_jpeg_to_brag(jpeg: &[u8]) -> Vec<u8> {
     pixels
 }
 
-/// zen pipeline: decode PNG → RGBA → BRAG → premultiply
 fn zen_decode_png_to_premul_brag(png: &[u8]) -> Vec<u8> {
     let output = zenpng::decode(png, &zenpng::PngDecodeConfig::default(), &Unstoppable).unwrap();
     let mut pixels = output.pixels.into_vec();
@@ -101,41 +117,59 @@ fn zen_decode_png_to_premul_brag(png: &[u8]) -> Vec<u8> {
 // ── Benchmarks ─────────────────────────────────────────────────────
 
 fn bench_jpeg_decode(suite: &mut Suite) {
-    let jpeg = Arc::new(encode_test_jpeg(JPEG_W, JPEG_H));
-    let bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3; // RGB output
+    // Encode with zenjpeg (all decoders decode the same file)
+    let rgb = make_bg_rgb(JPEG_W, JPEG_H);
+    let jpeg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
+    let bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3;
+
+    std::eprintln!(
+        "JPEG 4K encoded size: {} bytes ({:.1} KB)",
+        jpeg.len(),
+        jpeg.len() as f64 / 1024.0
+    );
 
     let j1 = jpeg.clone();
     let j2 = jpeg.clone();
     let j3 = jpeg.clone();
+    let j4 = jpeg.clone();
 
     suite.group("jpeg_decode_4k", move |g| {
         g.throughput(Throughput::Bytes(bytes));
         g.baseline("zenjpeg");
 
         g.bench("zenjpeg", move |b| {
-            let data = j1.clone();
+            let d = j1.clone();
             b.iter(move || {
                 let r = zenjpeg::decoder::Decoder::new()
                     .output_target(zenjpeg::decoder::OutputTarget::Srgb8)
-                    .decode(&data, Unstoppable)
+                    .decode(&d, Unstoppable)
                     .unwrap();
                 black_box(r.into_pixels_u8().unwrap())
             })
         });
 
-        g.bench("zune-jpeg", move |b| {
-            let data = j2.clone();
+        g.bench("mozjpeg", move |b| {
+            let d = j2.clone();
             b.iter(move || {
-                let mut dec = zune_jpeg::JpegDecoder::new(Cursor::new(&*data));
-                let pixels = dec.decode().unwrap();
+                let dec = mozjpeg::Decompress::new_mem(&d).unwrap();
+                let mut dec = dec.rgb().unwrap();
+                let pixels: Vec<u8> = dec.read_scanlines().unwrap();
                 black_box(pixels)
             })
         });
 
-        g.bench("image", move |b| {
-            let data = j3.clone();
+        g.bench("zune-jpeg", move |b| {
+            let d = j3.clone();
             b.iter(move || {
-                let img = image::ImageReader::new(Cursor::new(&*data))
+                let mut dec = zune_jpeg::JpegDecoder::new(Cursor::new(&*d));
+                black_box(dec.decode().unwrap())
+            })
+        });
+
+        g.bench("image", move |b| {
+            let d = j4.clone();
+            b.iter(move || {
+                let img = image::ImageReader::new(Cursor::new(&*d))
                     .with_guessed_format()
                     .unwrap()
                     .decode()
@@ -146,9 +180,72 @@ fn bench_jpeg_decode(suite: &mut Suite) {
     });
 }
 
+fn bench_jpeg_encode(suite: &mut Suite) {
+    let rgb = Arc::new(make_bg_rgb(JPEG_W, JPEG_H));
+    let bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3;
+
+    let r1 = rgb.clone();
+    let r2 = rgb.clone();
+    let r3 = rgb.clone();
+
+    suite.group("jpeg_encode_4k_q85", move |g| {
+        g.throughput(Throughput::Bytes(bytes));
+        g.baseline("zenjpeg");
+
+        g.bench("zenjpeg", move |b| {
+            let rgb = r1.clone();
+            b.iter(move || {
+                let out = encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H);
+                black_box(out)
+            })
+        });
+
+        g.bench("mozjpeg", move |b| {
+            let rgb = r2.clone();
+            b.iter(move || {
+                let out = encode_jpeg_mozjpeg(&rgb, JPEG_W, JPEG_H);
+                black_box(out)
+            })
+        });
+
+        g.bench("jpeg-encoder", move |b| {
+            let rgb = r3.clone();
+            b.iter(move || {
+                let out = encode_jpeg_encoder(&rgb, JPEG_W, JPEG_H);
+                black_box(out)
+            })
+        });
+    });
+
+    // Report encoded sizes
+    let rgb_ref = &*rgb;
+    let sz_zen = encode_jpeg_zenjpeg(rgb_ref, JPEG_W, JPEG_H).len();
+    let sz_moz = encode_jpeg_mozjpeg(rgb_ref, JPEG_W, JPEG_H).len();
+    let sz_enc = encode_jpeg_encoder(rgb_ref, JPEG_W, JPEG_H).len();
+    std::eprintln!("\nJPEG 4K encode sizes (quality 85, 4:2:0):");
+    std::eprintln!(
+        "  zenjpeg:       {sz_zen:>8} bytes ({:.1} KB)",
+        sz_zen as f64 / 1024.0
+    );
+    std::eprintln!(
+        "  mozjpeg:       {sz_moz:>8} bytes ({:.1} KB)",
+        sz_moz as f64 / 1024.0
+    );
+    std::eprintln!(
+        "  jpeg-encoder:  {sz_enc:>8} bytes ({:.1} KB)",
+        sz_enc as f64 / 1024.0
+    );
+}
+
 fn bench_png_decode(suite: &mut Suite) {
     let png = Arc::new(encode_test_png(PNG_W, PNG_H));
-    let bytes = (PNG_W as u64) * (PNG_H as u64) * 4; // RGBA output
+    let bytes = (PNG_W as u64) * (PNG_H as u64) * 4;
+
+    std::eprintln!(
+        "\nPNG 512x512 encoded size: {} bytes ({:.1} KB)",
+        png.len(),
+        png.len() as f64 / 1024.0
+    );
 
     let p1 = png.clone();
     let p2 = png.clone();
@@ -159,27 +256,26 @@ fn bench_png_decode(suite: &mut Suite) {
         g.baseline("zenpng");
 
         g.bench("zenpng", move |b| {
-            let data = p1.clone();
+            let d = p1.clone();
             b.iter(move || {
-                let out = zenpng::decode(&data, &zenpng::PngDecodeConfig::default(), &Unstoppable)
-                    .unwrap();
+                let out =
+                    zenpng::decode(&d, &zenpng::PngDecodeConfig::default(), &Unstoppable).unwrap();
                 black_box(out.pixels.into_vec())
             })
         });
 
         g.bench("zune-png", move |b| {
-            let data = p2.clone();
+            let d = p2.clone();
             b.iter(move || {
-                let mut dec = zune_png::PngDecoder::new(Cursor::new(&*data));
-                let pixels = dec.decode_raw().unwrap();
-                black_box(pixels)
+                let mut dec = zune_png::PngDecoder::new(Cursor::new(&*d));
+                black_box(dec.decode_raw().unwrap())
             })
         });
 
         g.bench("image", move |b| {
-            let data = p3.clone();
+            let d = p3.clone();
             b.iter(move || {
-                let img = image::ImageReader::new(Cursor::new(&*data))
+                let img = image::ImageReader::new(Cursor::new(&*d))
                     .with_guessed_format()
                     .unwrap()
                     .decode()
@@ -191,61 +287,54 @@ fn bench_png_decode(suite: &mut Suite) {
 }
 
 fn bench_full_pipeline(suite: &mut Suite) {
-    // Full pipeline: decode 4K JPEG bg + 512x512 PNG fg → composite
-    // We composite the PNG over the top-left 512x512 of the JPEG.
-    let jpeg = Arc::new(encode_test_jpeg(JPEG_W, JPEG_H));
+    let rgb = make_bg_rgb(JPEG_W, JPEG_H);
+    let jpeg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
     let png = Arc::new(encode_test_png(PNG_W, PNG_H));
 
-    let composite_pixels = (PNG_W as u64) * (PNG_H as u64);
-    let composite_bytes = composite_pixels * 4;
+    let composite_bytes = (PNG_W as u64) * (PNG_H as u64) * 4;
 
-    // Clone for later groups before moving into first closure
+    // Clone for later group
+    let j_later = jpeg.clone();
+    let p_later = png.clone();
+
+    let j1 = jpeg.clone();
+    let p1 = png.clone();
+    let j2 = jpeg.clone();
+    let p2 = png.clone();
     let j3 = jpeg.clone();
     let p3 = png.clone();
 
-    // ── zen + brag pipeline ────────────────────────────────────
-    let j1 = jpeg.clone();
-    let p1 = png.clone();
-    suite.group("full_pipeline_decode_composite", move |g| {
+    suite.group("full_pipeline_4k", move |g| {
         g.throughput(Throughput::Bytes(composite_bytes));
         g.baseline("zen+brag");
 
+        // ── zen + brag ─────────────────────────────────────────
         g.bench("zen+brag", move |b| {
             let jpeg = j1.clone();
             let png = p1.clone();
             b.iter(move || {
-                // Decode JPEG 4K → RGBA → BRAG (only first 512x512 used)
                 let bg_full = zen_decode_jpeg_to_brag(&jpeg);
-                // Take first 512 rows (stride = JPEG_W * 4, width = PNG_W * 4)
-                let mut bg_crop: Vec<u8> = Vec::with_capacity((PNG_W * PNG_H * 4) as usize);
                 let stride = (JPEG_W * 4) as usize;
+                let mut bg_crop = Vec::with_capacity((PNG_W * PNG_H * 4) as usize);
                 for y in 0..PNG_H as usize {
                     let start = y * stride;
                     bg_crop.extend_from_slice(&bg_full[start..start + (PNG_W * 4) as usize]);
                 }
-
-                // Decode PNG → BRAG → premultiply
                 let fg = zen_decode_png_to_premul_brag(&png);
-
-                // Composite
                 brag::composite::src_over(&fg, &mut bg_crop).unwrap();
                 black_box(bg_crop)
             })
         });
 
-        // ── zune codecs + sw-composite pipeline ──────────────────
-        let j2 = jpeg.clone();
-        let p2 = png.clone();
+        // ── zune + sw-composite ────────────────────────────────
         g.bench("zune+sw-composite", move |b| {
             let jpeg = j2.clone();
             let png = p2.clone();
             b.iter(move || {
-                // Decode JPEG with zune-jpeg → RGB
                 let mut jdec = zune_jpeg::JpegDecoder::new(Cursor::new(&*jpeg));
                 let jpeg_rgb = jdec.decode().unwrap();
                 let jpeg_w = JPEG_W as usize;
 
-                // Expand RGB→ARGB packed u32 (sw-composite format: 0xAARRGGBB)
                 let mut bg_argb: Vec<u32> = jpeg_rgb
                     .chunks_exact(3)
                     .map(|c| {
@@ -253,40 +342,37 @@ fn bench_full_pipeline(suite: &mut Suite) {
                     })
                     .collect();
 
-                // Decode PNG with zune-png → RGBA
                 let mut pdec = zune_png::PngDecoder::new(Cursor::new(&*png));
                 let png_rgba = pdec.decode_raw().unwrap();
 
-                // Convert PNG RGBA → premul ARGB packed u32
                 let fg_argb: Vec<u32> = png_rgba
                     .chunks_exact(4)
                     .map(|c| {
                         let a = c[3] as u32;
-                        let r = ((c[0] as u32 * a + 128) / 255) as u32;
-                        let g = ((c[1] as u32 * a + 128) / 255) as u32;
-                        let b = ((c[2] as u32 * a + 128) / 255) as u32;
+                        let r = (c[0] as u32 * a + 128) / 255;
+                        let g = (c[1] as u32 * a + 128) / 255;
+                        let b = (c[2] as u32 * a + 128) / 255;
                         (a << 24) | (r << 16) | (g << 8) | b
                     })
                     .collect();
 
-                // Composite 512x512 over top-left of 4K using sw-composite
                 for y in 0..PNG_H as usize {
                     let bg_start = y * jpeg_w;
                     for x in 0..PNG_W as usize {
-                        let fg_px = fg_argb[y * PNG_W as usize + x];
-                        bg_argb[bg_start + x] = sw_composite::over(fg_px, bg_argb[bg_start + x]);
+                        bg_argb[bg_start + x] = sw_composite::over(
+                            fg_argb[y * PNG_W as usize + x],
+                            bg_argb[bg_start + x],
+                        );
                     }
                 }
                 black_box(bg_argb)
             })
         });
 
-        // ── image crate pipeline ───────────────────────────────
-        let j3i = jpeg.clone();
-        let p3i = png.clone();
+        // ── image crate ────────────────────────────────────────
         g.bench("image", move |b| {
-            let jpeg = j3i.clone();
-            let png = p3i.clone();
+            let jpeg = j3.clone();
+            let png = p3.clone();
             b.iter(move || {
                 let bg = image::ImageReader::new(Cursor::new(&*jpeg))
                     .with_guessed_format()
@@ -300,7 +386,6 @@ fn bench_full_pipeline(suite: &mut Suite) {
                     .decode()
                     .unwrap()
                     .to_rgba8();
-
                 let mut bg = image::DynamicImage::ImageRgba8(bg);
                 image::imageops::overlay(&mut bg, &fg, 0, 0);
                 black_box(bg.to_rgba8().into_raw())
@@ -308,23 +393,24 @@ fn bench_full_pipeline(suite: &mut Suite) {
         });
     });
 
-    // ── Composite-only (pre-decoded, 4K BRAG buffers) ──────────
-    let bg_4k = Arc::new(zen_decode_jpeg_to_brag(&j3));
-    let fg_512 = Arc::new(zen_decode_png_to_premul_brag(&p3));
+    // ── Composite-only ─────────────────────────────────────────
+    let bg_4k = Arc::new(zen_decode_jpeg_to_brag(&j_later));
+    let fg_512 = Arc::new(zen_decode_png_to_premul_brag(&p_later));
 
     suite.group("composite_only_512x512", move |g| {
         g.throughput(Throughput::Bytes(composite_bytes));
 
+        let fg = fg_512.clone();
+        let bg = bg_4k.clone();
         g.bench("brag_src_over", move |b| {
-            let fg = fg_512.clone();
-            let bg_full = bg_4k.clone();
+            let fg = fg.clone();
+            let bg = bg.clone();
             b.with_input(move || {
-                // Crop 512x512 from top-left of 4K
                 let stride = (JPEG_W * 4) as usize;
                 let mut crop = Vec::with_capacity((PNG_W * PNG_H * 4) as usize);
                 for y in 0..PNG_H as usize {
                     let start = y * stride;
-                    crop.extend_from_slice(&bg_full[start..start + (PNG_W * 4) as usize]);
+                    crop.extend_from_slice(&bg[start..start + (PNG_W * 4) as usize]);
                 }
                 ((*fg).clone(), crop)
             })
@@ -336,4 +422,9 @@ fn bench_full_pipeline(suite: &mut Suite) {
     });
 }
 
-zenbench::main!(bench_jpeg_decode, bench_png_decode, bench_full_pipeline);
+zenbench::main!(
+    bench_jpeg_decode,
+    bench_jpeg_encode,
+    bench_png_decode,
+    bench_full_pipeline
+);
