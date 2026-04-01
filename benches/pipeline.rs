@@ -72,6 +72,29 @@ fn encode_jpeg_zenjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     enc.finish().unwrap()
 }
 
+fn encode_jpeg_zenjpeg_parallel(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let config =
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter)
+            .parallel(zenjpeg::encoder::ParallelEncoding::Auto);
+    let mut enc = config
+        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
+        .unwrap();
+    enc.push_packed(rgb, Unstoppable).unwrap();
+    enc.finish().unwrap()
+}
+
+fn encode_jpeg_zenjpeg_fixed(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let config =
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter)
+            .progressive(false)
+            .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
+    let mut enc = config
+        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
+        .unwrap();
+    enc.push_packed(rgb, Unstoppable).unwrap();
+    enc.finish().unwrap()
+}
+
 fn encode_jpeg_mozjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
     comp.set_size(w as usize, h as usize);
@@ -187,6 +210,8 @@ fn bench_jpeg_encode(suite: &mut Suite) {
     let r1 = rgb.clone();
     let r2 = rgb.clone();
     let r3 = rgb.clone();
+    let r4 = rgb.clone();
+    let r5 = rgb.clone();
 
     suite.group("jpeg_encode_4k_q85", move |g| {
         g.throughput(Throughput::Bytes(bytes));
@@ -194,45 +219,56 @@ fn bench_jpeg_encode(suite: &mut Suite) {
 
         g.bench("zenjpeg", move |b| {
             let rgb = r1.clone();
-            b.iter(move || {
-                let out = encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H);
-                black_box(out)
-            })
+            b.iter(move || black_box(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H)))
+        });
+
+        g.bench("zenjpeg-parallel", move |b| {
+            let rgb = r4.clone();
+            b.iter(move || black_box(encode_jpeg_zenjpeg_parallel(&rgb, JPEG_W, JPEG_H)))
+        });
+
+        g.bench("zenjpeg-fixed-huff", move |b| {
+            let rgb = r5.clone();
+            b.iter(move || black_box(encode_jpeg_zenjpeg_fixed(&rgb, JPEG_W, JPEG_H)))
         });
 
         g.bench("mozjpeg", move |b| {
             let rgb = r2.clone();
-            b.iter(move || {
-                let out = encode_jpeg_mozjpeg(&rgb, JPEG_W, JPEG_H);
-                black_box(out)
-            })
+            b.iter(move || black_box(encode_jpeg_mozjpeg(&rgb, JPEG_W, JPEG_H)))
         });
 
         g.bench("jpeg-encoder", move |b| {
             let rgb = r3.clone();
-            b.iter(move || {
-                let out = encode_jpeg_encoder(&rgb, JPEG_W, JPEG_H);
-                black_box(out)
-            })
+            b.iter(move || black_box(encode_jpeg_encoder(&rgb, JPEG_W, JPEG_H)))
         });
     });
 
     // Report encoded sizes
     let rgb_ref = &*rgb;
     let sz_zen = encode_jpeg_zenjpeg(rgb_ref, JPEG_W, JPEG_H).len();
+    let sz_par = encode_jpeg_zenjpeg_parallel(rgb_ref, JPEG_W, JPEG_H).len();
+    let sz_fix = encode_jpeg_zenjpeg_fixed(rgb_ref, JPEG_W, JPEG_H).len();
     let sz_moz = encode_jpeg_mozjpeg(rgb_ref, JPEG_W, JPEG_H).len();
     let sz_enc = encode_jpeg_encoder(rgb_ref, JPEG_W, JPEG_H).len();
     std::eprintln!("\nJPEG 4K encode sizes (quality 85, 4:2:0):");
     std::eprintln!(
-        "  zenjpeg:       {sz_zen:>8} bytes ({:.1} KB)",
+        "  zenjpeg:            {sz_zen:>8} bytes ({:.1} KB)",
         sz_zen as f64 / 1024.0
     );
     std::eprintln!(
-        "  mozjpeg:       {sz_moz:>8} bytes ({:.1} KB)",
+        "  zenjpeg-parallel:   {sz_par:>8} bytes ({:.1} KB)",
+        sz_par as f64 / 1024.0
+    );
+    std::eprintln!(
+        "  zenjpeg-fixed-huff: {sz_fix:>8} bytes ({:.1} KB)",
+        sz_fix as f64 / 1024.0
+    );
+    std::eprintln!(
+        "  mozjpeg:            {sz_moz:>8} bytes ({:.1} KB)",
         sz_moz as f64 / 1024.0
     );
     std::eprintln!(
-        "  jpeg-encoder:  {sz_enc:>8} bytes ({:.1} KB)",
+        "  jpeg-encoder:       {sz_enc:>8} bytes ({:.1} KB)",
         sz_enc as f64 / 1024.0
     );
 }

@@ -23,7 +23,7 @@ sw-composite = "0.7.16"
 alpha-blend = "0.1.2"
 tiny-skia = "0.12.0"
 zenpng = { path = "../zenpng" }
-zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder"] }
+zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder", "parallel"] }
 zenresize = { path = "../zenresize" }
 imgref = "1"
 rgb = "0.8"
@@ -34,6 +34,11 @@ zune-core = "0.5"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 mozjpeg = "0.10.13"
 jpeg-encoder = "0.7.0"
+butteraugli = { path = "../../butteraugli/butteraugli" }
+
+[[example]]
+name = "jpeg_quality"
+required-features = ["composite", "swizzle"]
 
 [[bench]]
 name = "compositing"
