@@ -26,7 +26,7 @@ This crate provides the reference implementation, including the **fastest u8 alp
 
 ## Performance
 
-`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the `archmage` SIMD dispatch framework, the `garb` pixel swizzle library, `zenblend`, `zenjpeg`, `zenpng`, `zenresize`, `butteraugli`, `linear-srgb` — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. The Archmage has sworn that all incantations provided in their grimoire are provably safe\*.
+`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the [`archmage`](https://github.com/imazen/archmage) SIMD dispatch framework, the [`garb`](https://github.com/imazen/garb) pixel swizzle library, [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb) — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. The Archmage has sworn that all incantations provided in [their grimoire](https://github.com/imazen/archmage) are provably safe\*.
 
 The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
 
