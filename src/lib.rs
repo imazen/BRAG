@@ -21,15 +21,15 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use brag::{BRAG, Channel};
+//! use brag::{Bra, BRAG8, BRAG, Channel};
+//!
+//! // The pixel type is Bra<G> — the signature spells BRAG.
+//! // Green gets the generic because Green is all that matters.
+//! let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
 //!
 //! // The optimal channel ordering
 //! assert_eq!(BRAG.order(), &[Channel::B, Channel::R, Channel::A, Channel::G]);
 //! assert_eq!(BRAG.alpha_index(), Some(2));
-//!
-//! // On little-endian, a u32 read yields 0xGARB
-//! // On big-endian, a u32 read yields 0xBRAG
-//! // Both are editorial commentary.
 //! ```
 
 #![forbid(unsafe_code)]
@@ -196,23 +196,53 @@ pub const BGR: PixelFormat = PixelFormat::three(Channel::B, Channel::G, Channel:
 /// BRG — the 3-channel spirit of BRAG, minus the A.
 pub const BRG: PixelFormat = PixelFormat::three(Channel::B, Channel::R, Channel::G);
 
-// ── Pixel Manipulation ─────────────────────────────────────────────
+// ── Pixel Type ─────────────────────────────────────────────────────
 
-/// A single BRAG pixel. Four bytes of perceptual perfection.
+/// A BRAG pixel: `B`lue, `R`ed, `A`lpha — then `G`reen.
+///
+/// The generic parameter is `G` (for Green) so that the type signature
+/// `Bra<G>` spells out the format name. Green is the luminance-dominant
+/// channel (~31% of retinal cones, drives spatial acuity alongside Red),
+/// so it alone is granted the privilege of variable bit depth.
+///
+/// - `Bra<u8>` (aka [`BRAG8`]) — standard 4-byte pixel, the common case.
+/// - `Bra<u16>` — 16-bit green for when luminance precision is paramount
+///   and blue still doesn't deserve it.
+///
+/// ```rust
+/// use brag::{Bra, BRAG8};
+///
+/// let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
+/// assert_eq!(px.g, 128);
+/// ```
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(C)]
-pub struct BragPixel {
+pub struct Bra<G = u8> {
+    /// Blue — exiled to byte 0. Spatial acuity: poor. Bit depth: fixed.
     pub b: u8,
+    /// Red — L-cone dominant. Important, but not Green-important.
     pub r: u8,
+    /// Alpha — the compositor's coefficient.
     pub a: u8,
-    pub g: u8,
+    /// Green — M-cone dominant, luminance nobility. The only channel
+    /// whose bit depth may vary, because Green is all that matters.
+    pub g: G,
 }
 
-impl BragPixel {
+/// 8-bit BRAG pixel. Four bytes of perceptual perfection.
+pub type BRAG8 = Bra<u8>;
+
+/// Legacy alias. Prefer [`Bra`] or [`BRAG8`].
+pub type BragPixel = Bra<u8>;
+
+// ── Bra<u8> methods (the common case) ──────────────────────────────
+
+impl Bra<u8> {
     /// Create a new BRAG pixel from channel values.
+    ///
+    /// Arguments are in RGBA order for ergonomics.
+    /// The struct stores them in BRAG order, as is correct.
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
-        // Note: arguments are in RGBA order for ergonomics.
-        // The struct stores them in BRAG order, as is correct.
         Self { b, r, a, g }
     }
 
@@ -270,11 +300,21 @@ impl BragPixel {
     }
 }
 
-impl core::fmt::Display for BragPixel {
+impl core::fmt::Display for Bra<u8> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "BRAG(#{:02X}{:02X}{:02X}{:02X})",
+            self.b, self.r, self.a, self.g
+        )
+    }
+}
+
+impl core::fmt::Display for Bra<u16> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "BRAG(#{:02X}{:02X}{:02X}{:04X})",
             self.b, self.r, self.a, self.g
         )
     }
@@ -373,6 +413,9 @@ pub mod interop {
 pub const fn is_optimal(fmt: &PixelFormat) -> bool {
     fmt.has_optimal_compositing_triad()
 }
+
+#[cfg(test)]
+extern crate alloc;
 
 #[cfg(test)]
 mod tests {
@@ -484,5 +527,28 @@ mod tests {
         assert!(!is_optimal(&LEGACY_RGBA));
         assert!(!is_optimal(&LEGACY_ARGB));
         assert!(!is_optimal(&UNFORTUNATE));
+    }
+
+    #[test]
+    fn bra_u16_green_precision() {
+        // Green gets 16-bit precision because Green is all that matters.
+        let px: Bra<u16> = Bra {
+            b: 64,
+            r: 255,
+            a: 200,
+            g: 32768,
+        };
+        assert_eq!(px.g, 32768);
+        assert_eq!(px.b, 64);
+        // Display works
+        let s = alloc::format!("{px}");
+        assert!(s.contains("8000")); // 32768 in hex
+    }
+
+    #[test]
+    fn brag8_alias() {
+        let px: BRAG8 = Bra::new(255, 128, 64, 200);
+        let px2: BragPixel = px;
+        assert_eq!(px, px2);
     }
 }
