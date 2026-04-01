@@ -27,6 +27,7 @@ dependencies = [
 name = "brag"
 version = "0.1.0"
 dependencies = [
+ "archmage",
  "garb",
 ]
 

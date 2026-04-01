@@ -35,6 +35,9 @@
 #![forbid(unsafe_code)]
 #![no_std]
 
+#[cfg(feature = "composite")]
+pub mod composite;
+
 /// A channel role within a pixel format.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -105,6 +108,7 @@ impl PixelFormat {
     ///
     /// BRAG achieves the theoretical minimum of 1 for *both* R and G.
     /// We've checked all 24 permutations. Several times. At 2 AM.
+    #[allow(clippy::manual_abs_diff)] // abs_diff isn't const-stable on all MSRV targets
     pub const fn compositing_triad_distance(&self) -> Option<(usize, usize)> {
         let a_idx = match self.alpha_index() {
             Some(i) => i,
@@ -509,7 +513,7 @@ mod tests {
         let p = BragPixel::new(200, 100, 50, 128);
         let pm = p.premultiply();
         // 200 * 128 / 255 ≈ 100
-        assert!((pm.r as i16 - 100).unsigned_abs() <= 1);
+        assert!(pm.r.abs_diff(100) <= 1);
         assert_eq!(pm.a, 128);
     }
 

@@ -14,7 +14,12 @@ rust-version = "1.85"
 [dependencies]
 # Path dep for local dev; switch to version = "0.2.6" before publishing
 garb = { path = "../../garb", optional = true }
+archmage = { version = "0.9.16", features = ["macros"], optional = true }
+
+[dev-dependencies]
+archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }
 
 [features]
 default = []
 garb = ["dep:garb"]
+composite = ["dep:archmage"]
