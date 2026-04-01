@@ -26,9 +26,7 @@ This crate provides the reference implementation, including the **fastest u8 alp
 
 ## Performance
 
-`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the `archmage` SIMD dispatch framework, the `garb` pixel swizzle library, `zenblend`, `zenjpeg`, `zenpng`, `zenresize`, `butteraugli`, `linear-srgb` — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. No `unsafe` blocks. No `#[allow(unsafe_code)]` exceptions. No C FFI. Zero lines of C or C++. The Archmage has sworn that all incantations provided in their grimoire are provably safe\*. All SIMD intrinsics dispatched through `archmage`'s safe token system.
-
-\**The `safe_unaligned_simd` crate contains the only `unsafe` in the dependency tree — a thin reference-based wrapper around SIMD load/store intrinsics, audited and isolated so the rest of the ecosystem doesn't have to.*
+`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the `archmage` SIMD dispatch framework, the `garb` pixel swizzle library, `zenblend`, `zenjpeg`, `zenpng`, `zenresize`, `butteraugli`, `linear-srgb` — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. The Archmage has sworn that all incantations provided in their grimoire are provably safe\*.
 
 The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
 
