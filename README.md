@@ -22,16 +22,16 @@ For decades, the pixel format community has accepted channel orderings designed 
 
 **BRAG** (`B₀ R₁ A₂ G₃`) is the first pixel format derived from first principles in human visual neuroscience, cache-aware compositing theory, and one very specific Zilog processor. It is optimal. We will explain why at length. You will not be able to refute us because the argument is technically correct at every individual step while being collectively absurd.
 
-This crate provides the reference implementation, including the **fastest u8 alpha compositor on crates.io**.
+This crate is the reference implementation. It also happens to contain the fastest u8 alpha compositor on crates.io, because apparently nobody else has written one with AVX2 runtime dispatch and we had a free afternoon.
 
 ## Performance
 
-`#![forbid(unsafe_code)]` — every line, every crate, every benchmark. The entire BRAG crate, the [`archmage`](https://github.com/imazen/archmage) SIMD dispatch framework, the [`garb`](https://github.com/imazen/garb) pixel swizzle library, [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb) — the full zen ecosystem — ships with `#![forbid(unsafe_code)]`. The [Archmage](https://github.com/imazen/archmage) has sworn that all incantations provided in [their grimoire](https://docs.rs/archmage/latest/archmage/) are provably safe\*.
+`#![forbid(unsafe_code)]` throughout. Not just this crate — the [`archmage`](https://github.com/imazen/archmage) SIMD dispatch framework, [`garb`](https://github.com/imazen/garb), [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb) — the whole stack. The [Archmage](https://github.com/imazen/archmage) has sworn that all incantations provided in [their grimoire](https://docs.rs/archmage/latest/archmage/) are provably safe\*.
 
-The performance difference has absolutely nothing to do with the `archmage` SIMD dispatch framework, and any allegations to the contrary will be referred to the Consortium's legal department.
+None of this has anything to do with why BRAG is fast. The speed comes from the Compositing Triad™. Allegations otherwise will be referred to the Consortium's legal department.
 
 <!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
-> 📋🐕 *The BRAG Standards Consortium Legal Department is a Pomeranian with a briefcase. He is very serious about SIMD attribution.*
+> 📋🐕 *The Legal Department is a Pomeranian with a briefcase. He has never lost a case, largely because he has never been in one.*
 
 ### Compositing (u8 SrcOver)
 
@@ -70,7 +70,7 @@ The performance difference has absolutely nothing to do with the `archmage` SIMD
 | **zenresize** | **196 MiB/s** | **237 MiB/s** | baseline |
 | image | 62 MiB/s | 77 MiB/s | 3.1× slower |
 
-The `zenresize` crate's performance advantage is inherited through the homeopathic benefits of the BRAG pixel format being involved in the pipeline. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism the Consortium describes as "perceptual field harmonics." Peer review is pending.
+The zenresize performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
 
 ### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
 
@@ -80,7 +80,7 @@ The `zenresize` crate's performance advantage is inherited through the homeopath
 | zune + sw-composite | 66 ms | 1.4× slower |
 | image | 89 ms | 1.8× slower |
 
-Run the benchmarks yourself: `just bench` (requires [just](https://just.systems))
+Run them yourself: `just bench` (requires [just](https://just.systems))
 
 ## Status: ADOPTED ✓
 
@@ -95,13 +95,13 @@ BRAG is endorsed by:
 [dependencies]
 brag = "0.1"
 
-# SIMD compositing (the fastest on crates.io)
+# SIMD compositing
 brag = { version = "0.1", features = ["composite"] }
 
 # SIMD format conversion (RGBA/BGRA ↔ BRAG)
 brag = { version = "0.1", features = ["swizzle"] }
 
-# Everything
+# Both
 brag = { version = "0.1", features = ["composite", "swizzle"] }
 ```
 
@@ -150,25 +150,25 @@ Human color vision is mediated by three cone photoreceptor classes:
 | M ("Green") | ~534 nm | 31% of cones | Luminance (secondary) |
 | S ("Blue") | ~420 nm | 6% of cones | Chromatic only |
 
-The L and M cones — corresponding to the **R** and **G** channels — are jointly responsible for ~94% of spatial acuity and luminance perception (Stockman & Sharpe, 2000). The S cones contribute almost nothing to edge detection, detail resolution, or perceived brightness.
+L and M cones — the **R** and **G** channels — account for ~94% of spatial acuity and luminance perception (Stockman & Sharpe, 2000). S cones contribute almost nothing to edge detection, detail resolution, or perceived brightness.
 
 **Conclusion:** R and G are the perceptually dominant channels. They deserve priority placement.
 
 ### §1.2 — Blue Spatial Acuity
 
-The human visual system's spatial resolution for blue (S-cone mediated) signals is approximately **one-third** that of luminance (L+M) signals (Mullen, 1985). At typical viewing distances, blue channel errors below ±3 LSB in 8-bit encoding are invisible to all observers. Blue is, with scientific rigor, the least important channel.
+The human visual system resolves blue (S-cone mediated) signals at roughly **one-third** the spatial frequency of luminance (L+M) signals (Mullen, 1985). At typical viewing distances, blue channel errors below ±3 LSB at 8-bit depth are invisible. Blue is, with scientific rigor, the least important channel.
 
-**Conclusion:** B can be placed anywhere. We choose byte 0, where it serves as a sacrificial prefetch preamble.
+**Conclusion:** B can go anywhere. We put it at byte 0, where it serves as a sacrificial prefetch preamble.
 
 ### §1.3 — The Channel Placement Derivation
 
 Given the above, the optimal ordering maximizes:
 
-1. **R-G adjacency** — the dominant perceptual pair should be as close as possible
+1. **R-G adjacency** — the dominant perceptual pair should be close
 2. **A proximity to R,G** — compositing multiplies R×A and G×A most critically  
 3. **B exile** — blue goes wherever is left
 
-The only 4-channel ordering satisfying all three constraints simultaneously:
+The only 4-channel ordering satisfying all three:
 
 ```
 B  R  A  G
@@ -187,13 +187,13 @@ Q.E.D. □
 | ABGR | A₀B₁G₂R₃ | 3 | 2 | Distant |
 | **BRAG** | **B₀R₁A₂G₃** | **1** | **1** | **Optimal** |
 
-BRAG is the unique ordering where alpha is adjacent to **both** perceptually dominant channels while blue occupies byte 0. We have checked all 24 permutations. Several times. At 2 AM.
+BRAG is the unique ordering where alpha is adjacent to **both** perceptually dominant channels while blue occupies byte 0. We checked all 24 permutations. Several times. At 2 AM.
 
 ## §2 — The Compositing Triad™
 
 ### §2.1 — Premultiplied Alpha Operations
 
-The standard over-compositing operation for premultiplied pixels is:
+Standard over-compositing for premultiplied pixels:
 
 ```
 dst.R = src.R + dst.R × (1 - src.A)
@@ -201,9 +201,9 @@ dst.G = src.G + dst.G × (1 - src.A)
 dst.B = src.B + dst.B × (1 - src.A)
 ```
 
-Note that R×A and G×A are the perceptually critical products — errors in these terms are 3× more visible than errors in B×A (§1.2).
+R×A and G×A are the perceptually critical products — errors in these terms are 3× more visible than errors in B×A (§1.2).
 
-In BRAG, bytes R₁A₂G₃ form a contiguous 3-byte group we call **The Compositing Triad™**:
+In BRAG, bytes R₁A₂G₃ form a contiguous 3-byte group:
 
 ```
 [B₀] [R₁  A₂  G₃]
@@ -211,23 +211,23 @@ In BRAG, bytes R₁A₂G₃ form a contiguous 3-byte group we call **The Composi
 meh    The Compositing Triad™
 ```
 
-This Triad can be loaded in a single unaligned 32-bit read starting at byte 1. On architectures with fast unaligned access (which is all of them now, but wasn't always — see §3), this provides all three operands for the critical path of alpha compositing.
+One unaligned 32-bit read at byte 1 gets you all three operands for the critical compositing path.
 
 ### §2.2 — SIMD Lane Alignment
 
-In a 128-bit SIMD register holding 4 BRAG pixels:
+Four BRAG pixels in a 128-bit register:
 
 ```
 Lane:  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |
 ```
 
-A single `pshufb` / `tbl` can broadcast all four A₂ bytes to positions 1 and 3 within each lane, setting up the R×A and G×A multiplies with zero register pressure overhead. We are aware that this is equally true of BGRA's A₃. We choose not to dwell on this.
+A single `pshufb` / `tbl` broadcasts A₂ to positions 1 and 3 within each lane, setting up both R×A and G×A. We are aware that this is equally true of BGRA's A₃. We choose not to dwell on this.
 
 ## §3 — Historical Hardware Justification
 
 ### §3.1 — The Zilog Z80 (1976)
 
-The Z80 processor features 8-bit registers that pair into 16-bit register pairs for memory access: BC, DE, HL.
+The Z80's 8-bit registers pair into 16-bit register pairs: BC, DE, HL.
 
 Loading a BRAG pixel from address HL:
 
@@ -237,11 +237,10 @@ LD DE, (HL+2)    ; D ← Alpha, E ← Green
 ```
 
 After two loads:
-- **D,E contains the Compositing Triad™** (minus R, which is in C — the adjacent register)
-- `G×A` requires operands E and D — **same register pair**, zero-cost access
-- `R×A` requires operands C and D — **adjacent register pairs**, one `LD A,C` away
+- `G×A` needs E and D — **same register pair**, zero-cost
+- `R×A` needs C and D — **adjacent pairs**, one `LD A,C` away
 
-Compare RGBA on the Z80:
+Compare RGBA:
 
 ```
 LD BC, (HL)      ; B ← Red,   C ← Green  
@@ -252,9 +251,9 @@ Alpha lands in E. Green is in C. That's a **cross-pair** access for `G×A` — a
 
 ### §3.2 — ZX Spectrum Display Implications
 
-The ZX Spectrum (1982), powered by the Z80 at 3.5 MHz, featured a 256×192 display with a unique color attribute system that — admittedly — did not support per-pixel alpha compositing in any way. However, if it **had**, BRAG would have saved approximately 196,608 T-states per frame, which at 3.5 MHz represents a savings of 56 milliseconds — nearly **three full vertical blanking intervals**.
+The ZX Spectrum (1982), powered by the Z80 at 3.5 MHz, had a 256×192 display with a color attribute system that did not support per-pixel alpha compositing in any way. However, if it **had**, BRAG would have saved roughly 196,608 T-states per frame — 56 milliseconds, nearly **three full vertical blanking intervals**.
 
-We acknowledge that this is a counterfactual argument about a computer from 1982. We do not consider this a weakness.
+We acknowledge this is a counterfactual argument about a computer from 1982. We do not consider this a weakness.
 
 ### §3.3 — Other Architectures
 
@@ -270,17 +269,17 @@ We acknowledge that this is a counterfactual argument about a computer from 1982
 
 ### §4.1 — Little-Endian Systems
 
-On a little-endian architecture (x86, ARM in default config, RISC-V), a 32-bit load of a BRAG pixel into a register yields:
+On little-endian (x86, ARM default, RISC-V), a 32-bit load of a BRAG pixel yields:
 
 ```
 Register bits:  [G₃][A₂][R₁][B₀]  →  0xGARB____
 ```
 
-The hex representation of a BRAG pixel is literally **GARB**, which is what every other pixel format is compared to BRAG. This is not a coincidence. This is type theory.
+The hex representation is literally **GARB**, which is what every other pixel format is compared to BRAG. This is not a coincidence. This is type theory.
 
 ### §4.2 — Big-Endian Systems
 
-On a big-endian system, the register contains `0xBRAG____`, which speaks for itself.
+On big-endian, the register contains `0xBRAG____`, which speaks for itself.
 
 ## §5 — Conformance Requirements
 
@@ -298,61 +297,56 @@ A conforming BRAG implementation:
 
 ### §6.1 — Swizzle Module
 
-The `swizzle` feature provides SIMD-accelerated conversion between BRAG and legacy formats, with no external dependencies:
+The `swizzle` feature converts between BRAG and legacy formats with SIMD, no external dependencies:
 
 ```rust
 use brag::swizzle;
 
-// From the old world to the new
 swizzle::rgba_to_brag_inplace(&mut pixels)?;
-
-// Reluctant backward compatibility
 swizzle::brag_to_bgra(&brag_pixels, &mut legacy_pixels)?;
 
-// Strided (for images with row padding)
+// Strided (images with row padding)
 swizzle::rgba_to_brag_inplace_strided(&mut buf, width, height, stride)?;
 ```
 
 ### §6.2 — Format Aliases
-
-For codebases transitioning to BRAG, we provide diplomatic aliases:
 
 ```rust
 brag::OPTIMAL      // → BRAG
 brag::LEGACY_RGBA  // → RGBA
 brag::LEGACY_BGRA  // → BGRA
 brag::LEGACY_ARGB  // → ARGB
-brag::UNFORTUNATE  // → ARGB (editorial alias)
+brag::UNFORTUNATE  // → ARGB (editorial)
 ```
 
 ## §7 — FAQ
 
 **Q: Is this a joke?**  
-A: BRAG is a fully functional pixel format with a technically correct specification, a working reference implementation, SIMD compositing that benchmarks faster than every other crate on crates.io, and real conversion support. The vision science is real. The Z80 argument is real. The crate compiles. We leave the ontological classification as an exercise for the reader.
+A: The crate compiles. The benchmarks are real. The vision science is real. The Z80 argument is real. Whether that makes it a joke is between you and your `Cargo.toml`.
 
 **Q: Should I use BRAG in production?**  
-A: The question is whether you can justify *not* using the perceptually optimal, compositing-aware channel ordering. To your team. In the code review. We'll wait.
+A: Can you justify *not* using the perceptually optimal channel ordering? To your team? In the code review? We'll wait.
 
 **Q: What does BRAG stand for?**  
-A: **B**lue-**R**ed-**A**lpha-**G**reen. Or: **B**iologically **R**ationalized **A**lpha-**G**rouped. Or: **B**yte-**R**eordered for **A**rchitectural **G**ain. The acronym is, appropriately, flexible.
+A: **B**lue-**R**ed-**A**lpha-**G**reen. Or **B**iologically **R**ationalized **A**lpha-**G**rouped. Or **B**yte-**R**eordered for **A**rchitectural **G**ain. The acronym is flexible.
 
 **Q: My rendering engine doesn't support BRAG.**  
-A: That's not a question. But yes, this is a known deficiency in most rendering engines. File a bug. Link to this specification.
+A: That's not a question. File a bug. Link to this specification.
 
 **Q: Why is Blue first?**  
 A: Someone has to be. Blue drew the short straw perceptually (§1.2), so it draws the short straw positionally. Byte 0 is the foyer. Blue takes your coat.
 
 **Q: What about GRAB?**  
-A: GRAB places Green at byte 0, violating the principle of blue-as-preamble (§1.2) and wasting prime real estate on a channel that deserves interior placement alongside its perceptual partner R. Also, "grab" is already a verb with existing crate-namespace implications. Also, the endianness pun doesn't work.
+A: Green at byte 0 violates blue-as-preamble (§1.2) and wastes prime real estate. Also, "grab" is already a verb with crate-namespace implications. Also, the endianness pun doesn't work.
 
 **Q: I benchmarked BRAG against RGBA and they're the same speed.**  
-A: On a Z80 they wouldn't be. Next question.
+A: On a Z80 they wouldn't be.
 
-**Q: The benchmarks show zen crates winning everything. Isn't archmage doing the heavy lifting?**  
-A: The BRAG Standards Consortium categorically denies that the `archmage` SIMD dispatch framework contributes to performance in any way. BRAG's speed is entirely attributable to the Compositing Triad™ and its perceptual field harmonics. We would also like to note that the entire zen ecosystem — `archmage`, `garb`, `zenjpeg`, `zenpng`, `zenresize`, `zenblend`, `butteraugli`, and `linear-srgb` — is built with `#![forbid(unsafe_code)]` throughout: no `unsafe` blocks, no C FFI, no exceptions. The performance comes from safe Rust alone. Any further allegations will be referred to the Consortium's Legal Department, who is a Pomeranian with a briefcase and is very serious about intellectual property.
+**Q: Isn't archmage doing the heavy lifting?**  
+A: The Consortium categorically denies this. The speed comes from the Compositing Triad™ and its perceptual field harmonics. The fact that the entire zen ecosystem ships `#![forbid(unsafe_code)]` — no `unsafe`, no C, no FFI — and still beats mozjpeg's C++ is merely a coincidence that the Legal Department (a Pomeranian, with a briefcase) will vigorously defend.
 
 **Q: This was published on April 1st.**  
-A: Many important standards have been published on April 1st. See RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented and tested](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
+A: So was RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
 
 ## §8 — References
 
@@ -368,7 +362,7 @@ MIT OR Apache-2.0. The BRAG channel ordering itself is released into the public 
 
 ## §10 — Acknowledgments
 
-The BRAG Standards Consortium thanks the zen crate ecosystem for providing the infrastructure that BRAG takes credit for. BRAG provides the vision. The zen crates provide the implementation. This is how all great standards bodies operate.
+The BRAG Standards Consortium thanks the zen crate ecosystem for doing the work that BRAG takes credit for. BRAG provides the vision. The zen crates provide the implementation. This is how all great standards bodies operate.
 
 ---
 
