@@ -35,22 +35,7 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 ### Compositing (u8 SrcOver)
 
-```mermaid
----
-config:
-    xyChart:
-        width: 700
-        height: 300
-    themeVariables:
-        xyChart:
-            backgroundColor: transparent
----
-xychart-beta
-    title "u8 SrcOver throughput (GiB/s, higher = better)"
-    x-axis ["brag", "sw-composite", "sw-exact", "naive scalar", "tiny-skia"]
-    y-axis "GiB/s" 0 --> 30
-    bar [27, 12, 6, 1.6, 1.0]
-```
+![u8 SrcOver Compositing](https://quickchart.io/chart?w=700&h=280&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22brag%22%2C%22sw-composite%22%2C%22sw-exact%22%2C%22naive%20scalar%22%2C%22tiny-skia%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B27%2C12%2C6%2C1.6%2C1%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A32%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20Compositing%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Compositor | 256×256 | 1024×1024 | vs brag |
 |------------|---------|-----------|---------|
@@ -62,13 +47,7 @@ xychart-beta
 
 ### JPEG Decode (4K, 3840×2160)
 
-```mermaid
-xychart-beta
-    title "4K JPEG decode throughput (MiB/s, higher = better)"
-    x-axis ["zenjpeg", "mozjpeg (C++)", "zune-jpeg", "image"]
-    y-axis "MiB/s" 0 --> 1200
-    bar [1106, 637, 461, 446]
-```
+![4K JPEG Decode](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%20%28Rust%29%22%2C%22mozjpeg%20%28C%2B%2B%29%22%2C%22zune-jpeg%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B1106%2C637%2C461%2C446%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Decoder | Throughput | vs zenjpeg |
 |---------|-----------|------------|
@@ -79,13 +58,7 @@ xychart-beta
 
 ### JPEG Encode (4K, quality 85, 4:2:0)
 
-```mermaid
-xychart-beta
-    title "4K JPEG encode speed (MiB/s, higher = better)"
-    x-axis ["zenjpeg-fixed", "jpeg-encoder", "zenjpeg", "mozjpeg (C++)"]
-    y-axis "MiB/s" 0 --> 700
-    bar [635, 412, 318, 49]
-```
+![4K JPEG Encode](https://quickchart.io/chart?w=700&h=280&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg-fixed%20%201957%20KB%22%2C%22jpeg-encoder%20%202929%20KB%22%2C%22zenjpeg%20%201651%20KB%22%2C%22mozjpeg%20%28C%2B%2B%29%20%201777%20KB%22%5D%2Cdatasets%3A%5B%7Blabel%3A%22Speed%20%28MiB/s%29%22%2Cdata%3A%5B635%2C412%2C318%2C49%5D%2CbackgroundColor%3A%22%234CAF50%22%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Encode%20q85%20%E2%80%94%20Speed%20%28bar%29%20%2B%20File%20Size%20%28label%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Encoder | Speed | Size | Butteraugli ↓ |
 |---------|-------|------|---------------|
@@ -98,13 +71,7 @@ xychart-beta
 
 ### Image Resize (4K → 1080p)
 
-```mermaid
-xychart-beta
-    title "4K→1080p resize (MiB/s, higher = better)"
-    x-axis ["zenresize Lanczos", "zenresize CatRom", "image Lanczos", "image CatRom"]
-    y-axis "MiB/s" 0 --> 260
-    bar [196, 237, 62, 77]
-```
+![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenresize%20Lanczos%22%2C%22zenresize%20CatRom%22%2C%22image%20Lanczos%22%2C%22image%20CatRom%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B196%2C237%2C62%2C77%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Resize%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Resizer | Lanczos | CatmullRom | vs zenresize |
 |---------|---------|------------|-------------|
@@ -115,13 +82,7 @@ The zenresize performance advantage is, of course, entirely due to the homeopath
 
 ### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
 
-```mermaid
-xychart-beta
-    title "Full pipeline: decode + composite (ms, lower = better)"
-    x-axis ["zen + brag", "zune + sw-composite", "image"]
-    y-axis "ms" 0 --> 100
-    bar [48, 66, 89]
-```
+![Full Pipeline](https://quickchart.io/chart?w=700&h=210&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zen%20%2B%20brag%22%2C%22zune%20%2B%20sw-composite%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B48%2C66%2C89%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A14%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20ms%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22Full%20Pipeline%3A%20decode%204K%20JPEG%20%2B%20PNG%20%E2%86%92%20composite%20%28ms%2C%20lower%20%3D%20better%29%22%2CfontSize%3A13%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Pipeline | Time | vs zen+brag |
 |----------|------|-------------|
