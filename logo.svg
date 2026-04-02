@@ -161,5 +161,5 @@
 <rect x="126" y="12" width="66" height="96" fill="url(#scanlines)"/>
 <rect x="192" y="12" width="66" height="96" fill="url(#scanlines)"/>
 <rect x="258" y="12" width="66" height="96" fill="url(#scanlines)"/>
-<rect x="12" y="10" width="324" height="100" fill="none" stroke="#222" stroke-width="1"/>
+
 </svg>
