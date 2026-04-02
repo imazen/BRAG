@@ -86,10 +86,10 @@ fn bench_src_over_u8(suite: &mut Suite) {
 
         suite.group(format!("src_over_u8_{label}"), move |g| {
             g.throughput(Throughput::Bytes(bytes));
-            g.baseline("brag");
+            g.baseline("BRAG8");
 
             // ── BRAG: SIMD SrcOver on u8 BRAG layout ─────────────
-            g.bench("brag", move |b| {
+            g.bench("BRAG8", move |b| {
                 b.with_input(move || (make_premul_brag(pixels), make_premul_brag(pixels)))
                     .run(|(src, mut dst)| {
                         brag::composite::src_over(&src, &mut dst).unwrap();
@@ -169,10 +169,10 @@ fn bench_src_over_f32(suite: &mut Suite) {
 
     suite.group("src_over_f32_1024x1024", move |g| {
         g.throughput(Throughput::Bytes(bytes));
-        g.baseline("brag-f32");
+        g.baseline("BRAG-f32");
 
         // ── BRAG f32: autoversioned ───────────────────────────────
-        g.bench("brag-f32", move |b| {
+        g.bench("BRAG-f32", move |b| {
             b.with_input(move || (make_premul_brag_f32(PIXELS), make_premul_brag_f32(PIXELS)))
                 .run(|(src, mut dst)| {
                     brag::composite::src_over_f32(&src, &mut dst).unwrap();
@@ -244,9 +244,9 @@ fn bench_premultiply(suite: &mut Suite) {
 
     suite.group("premultiply_u8_1024x1024", |g| {
         g.throughput(Throughput::Bytes((PIXELS * 4) as u64));
-        g.baseline("brag");
+        g.baseline("BRAG8");
 
-        g.bench("brag", |b| {
+        g.bench("BRAG8", |b| {
             b.with_input(|| {
                 (0..PIXELS * 4)
                     .map(|i| (i % 251) as u8)
@@ -282,9 +282,9 @@ fn bench_premultiply(suite: &mut Suite) {
 
     suite.group("premultiply_f32_1024x1024", |g| {
         g.throughput(Throughput::Bytes((PIXELS * 16) as u64));
-        g.baseline("brag-f32");
+        g.baseline("BRAG-f32");
 
-        g.bench("brag-f32", |b| {
+        g.bench("BRAG-f32", |b| {
             b.with_input(|| {
                 (0..PIXELS * 4)
                     .map(|i| (i % 251) as f32 / 255.0)

@@ -342,10 +342,10 @@ fn bench_full_pipeline(suite: &mut Suite) {
 
     suite.group("full_pipeline_4k", move |g| {
         g.throughput(Throughput::Bytes(composite_bytes));
-        g.baseline("zen+brag");
+        g.baseline("zen+BRAG8");
 
         // ── zen + brag ─────────────────────────────────────────
-        g.bench("zen+brag", move |b| {
+        g.bench("zen+BRAG8", move |b| {
             let jpeg = j1.clone();
             let png = p1.clone();
             b.iter(move || {
@@ -438,7 +438,7 @@ fn bench_full_pipeline(suite: &mut Suite) {
 
         let fg = fg_512.clone();
         let bg = bg_4k.clone();
-        g.bench("brag_src_over", move |b| {
+        g.bench("BRAG8_src_over", move |b| {
             let fg = fg.clone();
             let bg = bg.clone();
             b.with_input(move || {

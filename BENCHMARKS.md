@@ -6,9 +6,9 @@ All benchmarks run with `zenbench` on the same machine. No `-C target-cpu=native
 
 ### u8 SrcOver — 256x256 (fits in L2)
 
-| Compositor | Mean | Throughput | vs brag |
+| Compositor | Mean | Throughput | vs BRAG8 |
 |------------|------|-----------|---------|
-| **brag** | **9.0 µs** | **27.2 GiB/s** | baseline |
+| **BRAG8** | **9.0 µs** | **27.2 GiB/s** | baseline |
 | sw-composite (Mozilla) | 20.8 µs | 11.7 GiB/s | 2.3x slower |
 | sw-composite-exact | 40.2 µs | 6.1 GiB/s | 4.5x slower |
 | naive scalar | 156.3 µs | 1.6 GiB/s | 17.4x slower |
@@ -16,9 +16,9 @@ All benchmarks run with `zenbench` on the same machine. No `-C target-cpu=native
 
 ### u8 SrcOver — 1024x1024 (exceeds L2)
 
-| Compositor | Mean | Throughput | vs brag |
+| Compositor | Mean | Throughput | vs BRAG8 |
 |------------|------|-----------|---------|
-| **brag** | **265 µs** | **14.7 GiB/s** | baseline |
+| **BRAG8** | **265 µs** | **14.7 GiB/s** | baseline |
 | sw-composite | 366 µs | 10.7 GiB/s | 1.4x slower |
 | sw-composite-exact | 696 µs | 5.6 GiB/s | 2.6x slower |
 | naive scalar | 2.50 ms | 1.6 GiB/s | 9.4x slower |
@@ -26,16 +26,16 @@ All benchmarks run with `zenbench` on the same machine. No `-C target-cpu=native
 
 ### f32 SrcOver — 1024x1024
 
-| Compositor | Mean | Throughput | vs brag |
+| Compositor | Mean | Throughput | vs BRAG8 |
 |------------|------|-----------|---------|
 | zenblend (hand-written AVX2+FMA) | 1.3 ms | 12.4 GiB/s | 6% faster |
-| **brag-f32** (autoversioned) | **1.3 ms** | **11.7 GiB/s** | baseline |
+| **BRAG8-f32** (autoversioned) | **1.3 ms** | **11.7 GiB/s** | baseline |
 | naive-f32-scalar | 1.3 ms | 11.6 GiB/s | tied (LLVM auto-vectorizes) |
 | alpha-blend (f32) | 3.9 ms | 4.0 GiB/s | 2.9x slower |
 
 ### Premultiply — 1024x1024
 
-| Operation | Mean | Throughput | vs brag |
+| Operation | Mean | Throughput | vs BRAG8 |
 |-----------|------|-----------|---------|
 | **brag premultiply u8** | **700 µs** | **5.6 GiB/s** | baseline |
 | naive scalar u8 | 1.53 ms | 2.6 GiB/s | 2.2x slower |
@@ -73,9 +73,9 @@ All benchmarks run with `zenbench` on the same machine. No `-C target-cpu=native
 
 ## Full Pipeline: decode 4K JPEG + decode 512×512 PNG → composite
 
-| Pipeline | Mean | Throughput | vs zen+brag |
+| Pipeline | Mean | Throughput | vs zen+BRAG8 |
 |----------|------|-----------|-------------|
-| **zen + brag** | **47.9 ms** | **20.9 MiB/s** | baseline |
+| **zen + BRAG8** | **47.9 ms** | **20.9 MiB/s** | baseline |
 | zune + sw-composite | 66.4 ms | 15.1 MiB/s | 1.4x slower |
 | image | 88.5 ms | 11.3 MiB/s | 1.8x slower |
 
