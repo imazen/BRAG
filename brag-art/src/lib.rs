@@ -61,9 +61,11 @@ impl core::fmt::Display for CompositeError {
     }
 }
 
+impl core::error::Error for CompositeError {}
+
 #[inline]
 fn check_inplace(len: usize) -> Result<(), CompositeError> {
-    if len == 0 || len % 4 != 0 {
+    if len % 4 != 0 {
         Err(CompositeError::NotPixelAligned)
     } else {
         Ok(())
@@ -72,7 +74,7 @@ fn check_inplace(len: usize) -> Result<(), CompositeError> {
 
 #[inline]
 fn check_src_dst(src_len: usize, dst_len: usize) -> Result<(), CompositeError> {
-    if src_len == 0 || src_len % 4 != 0 {
+    if src_len % 4 != 0 {
         return Err(CompositeError::NotPixelAligned);
     }
     if dst_len < src_len {
@@ -110,6 +112,8 @@ pub fn unpremultiply(buf: &mut [u8]) -> Result<(), CompositeError> {
 /// ```
 ///
 /// Both buffers must contain premultiplied BRAG pixels.
+/// `dst` may be longer than `src` — only the first `src.len()` bytes
+/// are composited; the remainder of `dst` is left untouched.
 /// SIMD-accelerated: AVX2 processes 8 pixels per iteration.
 pub fn src_over(src: &[u8], dst: &mut [u8]) -> Result<(), CompositeError> {
     check_src_dst(src.len(), dst.len())?;
@@ -142,7 +146,7 @@ pub fn src_over_solid(dst: &mut [u8], color: [u8; 4]) -> Result<(), CompositeErr
 ///
 /// Autoversioned: LLVM auto-vectorizes this to AVX/NEON/WASM SIMD.
 pub fn src_over_f32(src: &[f32], dst: &mut [f32]) -> Result<(), CompositeError> {
-    if src.is_empty() || src.len() % 4 != 0 {
+    if src.len() % 4 != 0 {
         return Err(CompositeError::NotPixelAligned);
     }
     if dst.len() < src.len() {
@@ -156,7 +160,7 @@ pub fn src_over_f32(src: &[f32], dst: &mut [f32]) -> Result<(), CompositeError> 
 ///
 /// Alpha at index 2 per pixel. `C' = C * A` for B, R, G channels.
 pub fn premultiply_f32(buf: &mut [f32]) -> Result<(), CompositeError> {
-    if buf.is_empty() || buf.len() % 4 != 0 {
+    if buf.len() % 4 != 0 {
         return Err(CompositeError::NotPixelAligned);
     }
     premul_brag_f32_impl(buf);

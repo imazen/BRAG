@@ -51,11 +51,13 @@ impl core::fmt::Display for SwizzleError {
     }
 }
 
+impl core::error::Error for SwizzleError {}
+
 // ── Validation ─────────────────────────────────────────────────────
 
 #[inline]
 fn check_inplace(len: usize) -> Result<(), SwizzleError> {
-    if len == 0 || len % 4 != 0 {
+    if len % 4 != 0 {
         Err(SwizzleError::NotPixelAligned)
     } else {
         Ok(())
@@ -64,7 +66,7 @@ fn check_inplace(len: usize) -> Result<(), SwizzleError> {
 
 #[inline]
 fn check_copy(src_len: usize, dst_len: usize) -> Result<(), SwizzleError> {
-    if src_len == 0 || src_len % 4 != 0 {
+    if src_len % 4 != 0 {
         return Err(SwizzleError::NotPixelAligned);
     }
     if dst_len < src_len {

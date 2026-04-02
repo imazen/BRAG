@@ -300,6 +300,16 @@ impl From<Bra<u8>> for Brag<u8> {
     }
 }
 
+// ── Exact integer division by 255 ──────────────────────────────────
+
+/// Exact `round(x / 255.0)` for x in 0..=65025 (the range of u8 × u8).
+///
+/// Matches the formula used in [`brag_art`]'s SIMD compositing paths.
+const fn div255(x: u16) -> u8 {
+    let t = x + 128;
+    ((t + (t >> 8)) >> 8) as u8
+}
+
 // ── Bra<u8> methods (the common case) ──────────────────────────────
 
 impl Bra<u8> {
@@ -346,10 +356,10 @@ impl Bra<u8> {
     pub const fn premultiply(self) -> Self {
         let a = self.a as u16;
         Self {
-            b: ((self.b as u16 * a + 128) / 255) as u8,
-            r: ((self.r as u16 * a + 128) / 255) as u8,
+            b: div255(self.b as u16 * a),
+            r: div255(self.r as u16 * a),
             a: self.a,
-            g: ((self.g as u16 * a + 128) / 255) as u8,
+            g: div255(self.g as u16 * a),
         }
     }
 
@@ -450,7 +460,8 @@ pub mod interop {
                 // We could chain conversions, but honestly,
                 // if you're not converting to BRAG, why are you here?
                 panic!(
-                    "unsupported format pair: convert to BRAG first, then to your legacy format"
+                    "unsupported format pair — converting between two non-BRAG formats \
+                     is beneath this implementation (see §5.7)"
                 );
             }
         }
@@ -482,7 +493,8 @@ pub mod interop {
             }
             _ => {
                 panic!(
-                    "unsupported format pair: convert to BRAG first, then to your legacy format"
+                    "unsupported format pair — converting between two non-BRAG formats \
+                     is beneath this implementation (see §5.7)"
                 );
             }
         }
