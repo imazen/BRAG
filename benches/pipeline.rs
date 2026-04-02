@@ -152,15 +152,17 @@ fn bench_jpeg_decode(suite: &mut Suite) {
     );
 
     let j1 = jpeg.clone();
+    let j1s = jpeg.clone();
     let j2 = jpeg.clone();
     let j3 = jpeg.clone();
     let j4 = jpeg.clone();
 
     suite.group("jpeg_decode_4k", move |g| {
         g.throughput(Throughput::Bytes(bytes));
-        g.baseline("zenjpeg");
+        g.baseline("zenjpeg (parallel)");
 
-        g.bench("zenjpeg", move |b| {
+        // zenjpeg parallel — default thread pool, RST-segmented input
+        g.bench("zenjpeg (parallel)", move |b| {
             let d = j1.clone();
             b.iter(move || {
                 let r = zenjpeg::decoder::Decoder::new()
@@ -171,7 +173,21 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        g.bench("mozjpeg", move |b| {
+        // zenjpeg sequential — single-threaded for fair 1:1 comparison
+        g.bench("zenjpeg (1 thread)", move |b| {
+            let d = j1s.clone();
+            b.iter(move || {
+                let r = zenjpeg::decoder::Decoder::new()
+                    .output_target(zenjpeg::decoder::OutputTarget::Srgb8)
+                    .num_threads(1)
+                    .decode(&d, Unstoppable)
+                    .unwrap();
+                black_box(r.into_pixels_u8().unwrap())
+            })
+        });
+
+        // mozjpeg — always single-threaded (C library)
+        g.bench("mozjpeg (1 thread)", move |b| {
             let d = j2.clone();
             b.iter(move || {
                 let dec = mozjpeg::Decompress::new_mem(&d).unwrap();
@@ -181,7 +197,8 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        g.bench("zune-jpeg", move |b| {
+        // zune-jpeg — single-threaded
+        g.bench("zune-jpeg (1 thread)", move |b| {
             let d = j3.clone();
             b.iter(move || {
                 let mut dec = zune_jpeg::JpegDecoder::new(Cursor::new(&*d));
@@ -189,7 +206,8 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        g.bench("image", move |b| {
+        // image crate — single-threaded
+        g.bench("image (1 thread)", move |b| {
             let d = j4.clone();
             b.iter(move || {
                 let img = image::ImageReader::new(Cursor::new(&*d))
