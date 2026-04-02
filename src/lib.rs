@@ -31,7 +31,7 @@
 //! assert_eq!(BRAG.alpha_index(), Some(2));
 //! ```
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![no_std]
 
 /// A channel role within a pixel format.
