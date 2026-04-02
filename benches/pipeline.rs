@@ -161,7 +161,6 @@ fn bench_jpeg_decode(suite: &mut Suite) {
         g.throughput(Throughput::Bytes(bytes));
         g.baseline("zenjpeg (parallel)");
 
-        // zenjpeg parallel — default thread pool, RST-segmented input
         g.bench("zenjpeg (parallel)", move |b| {
             let d = j1.clone();
             b.iter(move || {
@@ -173,7 +172,6 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        // zenjpeg sequential — single-threaded for fair 1:1 comparison
         g.bench("zenjpeg (1 thread)", move |b| {
             let d = j1s.clone();
             b.iter(move || {
@@ -186,7 +184,6 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        // mozjpeg — always single-threaded (C library)
         g.bench("mozjpeg (1 thread)", move |b| {
             let d = j2.clone();
             b.iter(move || {
@@ -197,7 +194,6 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        // zune-jpeg — single-threaded
         g.bench("zune-jpeg (1 thread)", move |b| {
             let d = j3.clone();
             b.iter(move || {
@@ -206,7 +202,6 @@ fn bench_jpeg_decode(suite: &mut Suite) {
             })
         });
 
-        // image crate — single-threaded
         g.bench("image (1 thread)", move |b| {
             let d = j4.clone();
             b.iter(move || {
@@ -216,6 +211,55 @@ fn bench_jpeg_decode(suite: &mut Suite) {
                     .decode()
                     .unwrap();
                 black_box(img.to_rgb8().into_raw())
+            })
+        });
+    });
+
+    // Decode + convert to BRAG8 (zen path only — competitors output their native format)
+    let j1b = jpeg.clone();
+    let j2b = jpeg.clone();
+    let j3b = jpeg.clone();
+    let j4b = jpeg.clone();
+    let bytes_brag = (JPEG_W as u64) * (JPEG_H as u64) * 4;
+
+    suite.group("jpeg_decode_4k_+BRAG8", move |g| {
+        g.throughput(Throughput::Bytes(bytes_brag));
+        g.baseline("zenjpeg→BRAG8 (parallel)");
+
+        // zenjpeg: decode + RGB→RGBA expand + BRAG8 swizzle
+        g.bench("zenjpeg→BRAG8 (parallel)", move |b| {
+            let d = j1b.clone();
+            b.iter(move || black_box(zen_decode_jpeg_to_brag(&d)))
+        });
+
+        // Competitors: decode to native format (RGB or RGBA) — no BRAG conversion
+        g.bench("mozjpeg→RGB (1 thread)", move |b| {
+            let d = j2b.clone();
+            b.iter(move || {
+                let dec = mozjpeg::Decompress::new_mem(&d).unwrap();
+                let mut dec = dec.rgb().unwrap();
+                let pixels: Vec<u8> = dec.read_scanlines().unwrap();
+                black_box(pixels)
+            })
+        });
+
+        g.bench("zune-jpeg→RGB (1 thread)", move |b| {
+            let d = j3b.clone();
+            b.iter(move || {
+                let mut dec = zune_jpeg::JpegDecoder::new(Cursor::new(&*d));
+                black_box(dec.decode().unwrap())
+            })
+        });
+
+        g.bench("image→RGBA (1 thread)", move |b| {
+            let d = j4b.clone();
+            b.iter(move || {
+                let img = image::ImageReader::new(Cursor::new(&*d))
+                    .with_guessed_format()
+                    .unwrap()
+                    .decode()
+                    .unwrap();
+                black_box(img.to_rgba8().into_raw())
             })
         });
     });
