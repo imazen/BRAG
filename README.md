@@ -1,4 +1,4 @@
-# 🏆 BRAG ![crates.io](https://img.shields.io/crates/v/brag?style=flat-square) ![unsafe: forbidden](https://img.shields.io/badge/unsafe-forbidden-brightgreen?style=flat-square) ![coverage: 470%](https://img.shields.io/badge/coverage-470%25-brightgreen?style=flat-square) ![peer review: pending](https://img.shields.io/badge/peer_review-pending-yellow?style=flat-square) ![license: yes](https://img.shields.io/badge/license-yes-blue?style=flat-square)
+# BRAG ![crates.io](https://img.shields.io/crates/v/brag?style=flat-square) ![unsafe: forbidden](https://img.shields.io/badge/unsafe-forbidden-brightgreen?style=flat-square) ![coverage: 470%](https://img.shields.io/badge/coverage-470%25-brightgreen?style=flat-square) ![peer review: pending](https://img.shields.io/badge/peer_review-pending-yellow?style=flat-square) ![license: yes](https://img.shields.io/badge/license-yes-blue?style=flat-square)
 
 ### The Biologically Rationalized Alpha-Grouped Pixel Format
 
