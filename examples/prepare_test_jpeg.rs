@@ -1,11 +1,17 @@
-//! Decode → resize (crop-constrain to 3840×2160) → encode 4:4:4 q85 with RSTs.
+//! Normalize any JPEG to sequential 4:4:4 q85 with RST markers.
 //!
-//! Usage: cargo run --example prepare_test_jpeg --release --features composite,swizzle -- input.jpg output.jpg
+//! Decode → resize (crop-constrain) → encode sequential 4:4:4 q85.
+//! Output is optimal for parallel decode benchmarks.
+//!
+//! Usage: cargo run --example prepare_test_jpeg --release --features composite,swizzle -- input.jpg output.jpg [WIDTHxHEIGHT]
+//!
+//! Default output size: 3840x2160
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() != 3 {
-        eprintln!("Usage: {} <input.jpg> <output.jpg>", args[0]);
+    if args.len() < 3 || args.len() > 4 {
+        eprintln!("Usage: {} <input.jpg> <output.jpg> [WIDTHxHEIGHT]", args[0]);
+        eprintln!("  Default: 3840x2160");
         std::process::exit(1);
     }
 
@@ -29,9 +35,20 @@ fn main() {
         rgba.extend_from_slice(&[c[0], c[1], c[2], 255]);
     }
 
-    // Resize to 3840x2160 using Lanczos (crop-constrain: resize to cover, then crop)
-    let out_w: u32 = 3840;
-    let out_h: u32 = 2160;
+    // Parse target dimensions
+    let (out_w, out_h): (u32, u32) = if args.len() == 4 {
+        let parts: Vec<&str> = args[3].split('x').collect();
+        if parts.len() != 2 {
+            eprintln!("Invalid dimensions: {} (expected WIDTHxHEIGHT)", args[3]);
+            std::process::exit(1);
+        }
+        (
+            parts[0].parse().expect("invalid width"),
+            parts[1].parse().expect("invalid height"),
+        )
+    } else {
+        (3840, 2160)
+    };
 
     // Compute scale to cover the target dimensions
     let scale_w = out_w as f64 / in_w as f64;

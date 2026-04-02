@@ -37,5 +37,11 @@ clippy:
 fmt:
     cargo fmt
 
+# Normalize any JPEG to sequential 4:4:4 q85 with RST markers (for benchmarking)
+# Decode → Lanczos resize (crop-constrain) → encode sequential 4:4:4 q85
+# Usage: just normalize-jpeg input.jpg output.jpg [3840x2160]
+normalize-jpeg input output dims="3840x2160":
+    cargo run --example prepare_test_jpeg --release --features composite,swizzle -- {{input}} {{output}} {{dims}}
+
 # Full CI check (fmt + clippy + test)
 ci: fmt clippy test
