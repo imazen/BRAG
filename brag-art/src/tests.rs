@@ -1,7 +1,7 @@
 extern crate alloc;
 extern crate std;
 
-use super::*;
+use crate::*;
 use alloc::{vec, vec::Vec};
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 
@@ -216,19 +216,13 @@ fn permutation_src_over() {
 #[test]
 fn permutation_src_over_solid() {
     let report = for_each_token_permutation(policy(), |perm| {
-        let color = crate::Bra {
-            b: 30,
-            r: 100,
-            a: 180,
-            g: 60,
-        };
-        let color_bytes = [color.b, color.r, color.a, color.g];
+        let color_bytes: [u8; 4] = [30, 100, 180, 60]; // [B, R, A, G]
         for &n in TEST_PIXEL_COUNTS {
             let mut dst = make_premul_brag(n);
             // Build equivalent src buffer of repeated color
             let src: Vec<u8> = (0..n).flat_map(|_| color_bytes).collect();
             let expected = ref_src_over(&src, &dst);
-            src_over_solid(&mut dst, color).unwrap();
+            src_over_solid(&mut dst, color_bytes).unwrap();
             assert_eq!(dst, expected, "src_over_solid n={n} tier={perm}");
         }
     });

@@ -1,0 +1,17 @@
+[package]
+name = "brag-art"
+version = "0.1.0"
+edition = "2024"
+authors = ["Lilith River <lilith@imazen.io>", "The BRAG Standards Consortium"]
+description = "The art of compositing — SIMD-accelerated premultiply, unpremultiply, and Porter-Duff SrcOver for BRAG8 pixels"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/imazen/brag"
+keywords = ["compositing", "alpha", "simd", "porter-duff", "brag"]
+categories = ["graphics", "multimedia::images"]
+rust-version = "1.85"
+
+[dependencies]
+archmage = { version = "0.9.16", features = ["macros"] }
+
+[dev-dependencies]
+archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }

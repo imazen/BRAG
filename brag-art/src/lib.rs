@@ -1,15 +1,24 @@
-//! SIMD-accelerated alpha compositing for BRAG pixels.
+//! # brag-art — SIMD-accelerated alpha compositing
 //!
-//! The Compositing Triad™ (`R₁ A₂ G₃`) was designed for exactly this:
-//! premultiplication, unpremultiplication, and Porter-Duff compositing
-//! with alpha adjacent to both luminance-dominant channels.
+//! The art of compositing, perfected by the Compositing Triad™.
 //!
-//! All operations use runtime SIMD dispatch via [`archmage`]:
-//! AVX2 on x86-64, NEON on AArch64, SIMD128 on WASM, with scalar fallback.
-//! No recompilation needed — the optimal path is selected at first call.
+//! `brag-art` provides premultiplication, unpremultiplication, and
+//! Porter-Duff SrcOver compositing for BRAG8 pixels (`[B₀, R₁, A₂, G₃]`),
+//! with runtime SIMD dispatch: AVX2, NEON, WASM SIMD128, scalar fallback.
 //!
-//! All buffers must be in BRAG byte layout: `[B₀, R₁, A₂, G₃]` per pixel,
-//! 4 bytes each, length divisible by 4.
+//! `#![forbid(unsafe_code)]` — all SIMD via [`archmage`]'s safe token system.
+//!
+//! ```rust
+//! let mut pixels = vec![128u8, 200, 255, 100, 64, 100, 128, 50]; // 2 BRAG8 pixels
+//! brag_art::premultiply(&mut pixels).unwrap();
+//!
+//! let src = vec![0u8; 8]; // transparent
+//! let mut dst = pixels;
+//! brag_art::src_over(&src, &mut dst).unwrap();
+//! ```
+
+#![forbid(unsafe_code)]
+#![no_std]
 
 use archmage::incant;
 
@@ -110,13 +119,13 @@ pub fn src_over(src: &[u8], dst: &mut [u8]) -> Result<(), CompositeError> {
 
 /// Porter-Duff SrcOver with a solid premultiplied BRAG color.
 ///
-/// Composites `color` over every pixel in `dst`. More efficient than
+/// `color` is `[B, R, A, G]` — a single BRAG8 pixel.
+/// Composites it over every pixel in `dst`. More efficient than
 /// [`src_over`] when the source is uniform (color stays in registers).
-pub fn src_over_solid(dst: &mut [u8], color: crate::Bra<u8>) -> Result<(), CompositeError> {
+pub fn src_over_solid(dst: &mut [u8], color: [u8; 4]) -> Result<(), CompositeError> {
     check_inplace(dst.len())?;
-    let c = [color.b, color.r, color.a, color.g];
     incant!(
-        src_over_solid_brag_impl(dst, &c),
+        src_over_solid_brag_impl(dst, &color),
         [v3, neon, wasm128, scalar]
     );
     Ok(())

@@ -35,8 +35,9 @@
 #![forbid(unsafe_code)]
 #![no_std]
 
+/// SIMD-accelerated alpha compositing. Re-exported from [`brag_art`].
 #[cfg(feature = "composite")]
-pub mod composite;
+pub use brag_art as composite;
 
 /// A channel role within a pixel format.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
