@@ -32,7 +32,7 @@
 //! assert_eq!(BRAG.alpha_index(), Some(2));
 //! ```
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![no_std]
 
 /// A channel role within a pixel format.
@@ -236,65 +236,113 @@ pub type BRAG8 = Bra<u8>;
 /// Legacy alias. Prefer [`Bra`] or [`BRAG8`].
 pub type BragPixel = Bra<u8>;
 
-/// A uniform BRAG pixel where all channels share the same type.
+/// A uniform BRAG pixel where all channels share type `T`.
 ///
-/// Use `Brag<T>` when all four channels have equal bit depth
-/// (the common case for interop with other pixel libraries).
-/// Use [`Bra<G>`] when Green deserves more precision than the others.
+/// `#[repr(transparent)]` over `[T; 4]` — zero-cost conversion to/from arrays,
+/// and `bytemuck::Pod` for free when `T: Pod`.
+///
+/// Use `Brag<T>` when all channels have equal bit depth. Use [`Bra<G>`] when
+/// Green deserves more precision than the others.
+///
+/// Channel order in memory: `[B, R, A, G]`.
 ///
 /// ```rust
 /// use brag::Brag;
 ///
-/// let px: Brag<u8> = Brag { b: 64, r: 255, a: 200, g: 128 };
-/// let px_f32: Brag<f32> = Brag { b: 0.25, r: 1.0, a: 0.78, g: 0.5 };
+/// let px = Brag::new(64, 255, 200, 128); // b, r, a, g
+/// assert_eq!(px.b(), 64);
+/// assert_eq!(px.g(), 128);
+///
+/// let arr: [u8; 4] = px.into();
+/// let px2: Brag<u8> = arr.into();
 /// ```
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[repr(C)]
-pub struct Brag<T> {
-    /// Blue
-    pub b: T,
-    /// Red
-    pub r: T,
-    /// Alpha
-    pub a: T,
-    /// Green
-    pub g: T,
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(transparent)]
+pub struct Brag<T>(pub [T; 4]);
+
+impl<T: Copy> Brag<T> {
+    /// Create a new BRAG pixel: `(b, r, a, g)`.
+    pub const fn new(b: T, r: T, a: T, g: T) -> Self {
+        Self([b, r, a, g])
+    }
+
+    /// Blue channel.
+    pub const fn b(&self) -> T {
+        self.0[0]
+    }
+    /// Red channel.
+    pub const fn r(&self) -> T {
+        self.0[1]
+    }
+    /// Alpha channel.
+    pub const fn a(&self) -> T {
+        self.0[2]
+    }
+    /// Green channel.
+    pub const fn g(&self) -> T {
+        self.0[3]
+    }
+
+    /// As a `[B, R, A, G]` array reference.
+    pub const fn as_array(&self) -> &[T; 4] {
+        &self.0
+    }
+    /// As a mutable `[B, R, A, G]` array reference.
+    pub fn as_array_mut(&mut self) -> &mut [T; 4] {
+        &mut self.0
+    }
 }
 
 impl<T> From<Brag<T>> for [T; 4] {
     fn from(px: Brag<T>) -> [T; 4] {
-        [px.b, px.r, px.a, px.g]
+        px.0
     }
 }
 
 impl<T> From<[T; 4]> for Brag<T> {
-    fn from([b, r, a, g]: [T; 4]) -> Self {
-        Self { b, r, a, g }
+    fn from(arr: [T; 4]) -> Self {
+        Self(arr)
     }
 }
 
-/// `Brag<u8>` can be used as `Bra<u8>` and vice versa — same layout.
+impl<T> core::ops::Deref for Brag<T> {
+    type Target = [T; 4];
+    fn deref(&self) -> &[T; 4] {
+        &self.0
+    }
+}
+
+impl<T> core::ops::DerefMut for Brag<T> {
+    fn deref_mut(&mut self) -> &mut [T; 4] {
+        &mut self.0
+    }
+}
+
+/// `Brag<u8>` ↔ `Bra<u8>` — same memory layout.
 impl From<Brag<u8>> for Bra<u8> {
     fn from(px: Brag<u8>) -> Self {
         Self {
-            b: px.b,
-            r: px.r,
-            a: px.a,
-            g: px.g,
+            b: px.0[0],
+            r: px.0[1],
+            a: px.0[2],
+            g: px.0[3],
         }
     }
 }
 
 impl From<Bra<u8>> for Brag<u8> {
     fn from(px: Bra<u8>) -> Self {
-        Self {
-            b: px.b,
-            r: px.r,
-            a: px.a,
-            g: px.g,
-        }
+        Self([px.b, px.r, px.a, px.g])
     }
 }
+
+// ── bytemuck for Bra<u8> (repr(C), needs manual impl) ───────────
+#[allow(unsafe_code)]
+// SAFETY: Bra<u8> is #[repr(C)] with 4 u8 fields — no padding, align 1, all bit patterns valid.
+unsafe impl bytemuck::Zeroable for Bra<u8> {}
+#[allow(unsafe_code)]
+unsafe impl bytemuck::Pod for Bra<u8> {}
+// Brag<T> gets Pod automatically via derive + #[repr(transparent)] when T: Pod.
 
 // ── Exact integer division by 255 ──────────────────────────────────
 

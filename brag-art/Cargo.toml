@@ -12,6 +12,8 @@ rust-version = "1.85"
 
 [dependencies]
 archmage = { version = "0.9.16", features = ["macros"] }
+brag = { path = ".." }
+bytemuck = { version = "1.25.0", features = ["derive"] }
 
 [dev-dependencies]
 archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }

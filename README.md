@@ -86,7 +86,7 @@ brag-art = "0.1"                                     # SIMD compositing
 use brag::{Bra, Brag, BRAG8};
 
 let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
-let uniform: Brag<f32> = Brag { b: 0.25, r: 1.0, a: 0.78, g: 0.5 };
+let uniform: Brag<f32> = Brag::new(0.25, 1.0, 0.78, 0.5);
 
 // SIMD format conversion (brag crate, feature = "swizzle")
 brag::swizzle::rgba_to_brag_inplace(&mut pixels)?;

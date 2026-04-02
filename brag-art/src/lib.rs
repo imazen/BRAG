@@ -43,6 +43,90 @@ use wasm::*;
 #[cfg(test)]
 mod tests;
 
+/// Describes a rectangular blit from a source image onto a destination image.
+///
+/// Both images are flat `&[Bra]` buffers of premultiplied BRAG8 pixels.
+/// Strides are in **pixels** (not bytes).
+///
+/// ```text
+///  src buffer                    dst buffer
+/// ┌──────────────┐              ┌────────────────────┐
+/// │              │              │                    │
+/// │  ┌──────┐    │              │    ┌──────┐        │
+/// │  │region│    │   ───────►   │    │region│        │
+/// │  └──────┘    │              │    └──────┘        │
+/// │              │              │                    │
+/// └──────────────┘              └────────────────────┘
+///    src_x,src_y                   dst_x,dst_y
+/// ```
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Blit {
+    /// X offset into the source buffer (pixels from left edge).
+    pub src_x: u32,
+    /// Y offset into the source buffer (rows from top edge).
+    pub src_y: u32,
+    /// X offset into the destination buffer (pixels from left edge).
+    pub dst_x: u32,
+    /// Y offset into the destination buffer (rows from top edge).
+    pub dst_y: u32,
+    /// Width of the region to composite (pixels).
+    pub width: u32,
+    /// Height of the region to composite (rows).
+    pub height: u32,
+    /// Row stride of the source buffer (pixels per row, including padding).
+    pub src_stride: u32,
+    /// Row stride of the destination buffer (pixels per row, including padding).
+    pub dst_stride: u32,
+}
+
+impl Blit {
+    /// Create a blit that composites the entire source (dimensions `src_w × src_h`)
+    /// at position `(dst_x, dst_y)` in the destination (stride `dst_stride`).
+    pub fn new(src_w: u32, src_h: u32, dst_x: u32, dst_y: u32, dst_stride: u32) -> Self {
+        Self {
+            src_x: 0,
+            src_y: 0,
+            dst_x,
+            dst_y,
+            width: src_w,
+            height: src_h,
+            src_stride: src_w,
+            dst_stride,
+        }
+    }
+
+    /// Composite `src` over `dst` using Porter-Duff SrcOver.
+    ///
+    /// Both buffers must contain premultiplied BRAG8 pixels.
+    pub fn src_over(&self, src: &[brag::Bra], dst: &mut [brag::Bra]) -> Result<(), CompositeError> {
+        let row_px = self.width as usize;
+        let src_stride = self.src_stride as usize;
+        let dst_stride = self.dst_stride as usize;
+        let src_x = self.src_x as usize;
+        let dst_x = self.dst_x as usize;
+
+        for y in 0..self.height as usize {
+            let src_start = (self.src_y as usize + y) * src_stride + src_x;
+            let dst_start = (self.dst_y as usize + y) * dst_stride + dst_x;
+
+            let src_row: &[u8] = bytemuck::cast_slice(
+                src.get(src_start..src_start + row_px)
+                    .ok_or(CompositeError::LengthMismatch)?,
+            );
+            let dst_row: &mut [u8] = bytemuck::cast_slice_mut(
+                dst.get_mut(dst_start..dst_start + row_px)
+                    .ok_or(CompositeError::LengthMismatch)?,
+            );
+
+            incant!(
+                src_over_brag_impl(src_row, dst_row),
+                [v3, neon, wasm128, scalar]
+            );
+        }
+        Ok(())
+    }
+}
+
 /// Error from a compositing operation.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CompositeError {

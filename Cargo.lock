@@ -138,6 +138,7 @@ dependencies = [
  "archmage",
  "brag-art",
  "butteraugli",
+ "bytemuck",
  "enough",
  "garb 0.2.5",
  "image",
@@ -163,6 +164,8 @@ name = "brag-art"
 version = "0.1.0"
 dependencies = [
  "archmage",
+ "brag",
+ "bytemuck",
 ]
 
 [[package]]

@@ -18,6 +18,7 @@ rust-version = "1.85"
 # Path dep for local dev; switch to version = "0.2.6" before publishing
 garb = { path = "../../garb", optional = true }
 archmage = { version = "0.9.16", features = ["macros"], optional = true }
+bytemuck = { version = "1.25.0", features = ["derive"] }
 
 [dev-dependencies]
 archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }

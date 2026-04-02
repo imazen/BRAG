@@ -416,16 +416,12 @@ fn bench_full_pipeline(suite: &mut Suite) {
             let jpeg = j1.clone();
             let png = p1.clone();
             b.iter(move || {
-                let bg_full = zen_decode_jpeg_to_brag(&jpeg);
-                let stride = (JPEG_W * 4) as usize;
-                let mut bg_crop = Vec::with_capacity((PNG_W * PNG_H * 4) as usize);
-                for y in 0..PNG_H as usize {
-                    let start = y * stride;
-                    bg_crop.extend_from_slice(&bg_full[start..start + (PNG_W * 4) as usize]);
-                }
+                let mut bg = zen_decode_jpeg_to_brag(&jpeg);
                 let fg = zen_decode_png_to_premul_brag(&png);
-                brag_art::src_over(&fg, &mut bg_crop).unwrap();
-                black_box(bg_crop)
+                brag_art::Blit::new(PNG_W, PNG_H, 0, 0, JPEG_W)
+                    .src_over(bytemuck::cast_slice(&fg), bytemuck::cast_slice_mut(&mut bg))
+                    .unwrap();
+                black_box(bg)
             })
         });
 
@@ -555,15 +551,9 @@ fn bench_roundtrip(suite: &mut Suite) {
                 let fg = zen_decode_png_to_premul_brag(&png);
 
                 // Composite PNG over top-left corner of JPEG
-                let stride = (JPEG_W * 4) as usize;
-                let fg_row_bytes = (PNG_W * 4) as usize;
-                for y in 0..PNG_H as usize {
-                    let bg_start = y * stride;
-                    let fg_start = y * fg_row_bytes;
-                    let bg_row = &mut bg[bg_start..bg_start + fg_row_bytes];
-                    let fg_row = &fg[fg_start..fg_start + fg_row_bytes];
-                    brag_art::src_over(fg_row, bg_row).unwrap();
-                }
+                brag_art::Blit::new(PNG_W, PNG_H, 0, 0, JPEG_W)
+                    .src_over(bytemuck::cast_slice(&fg), bytemuck::cast_slice_mut(&mut bg))
+                    .unwrap();
 
                 // Convert BRAG8 back to RGB for JPEG encode
                 brag::swizzle::brag_to_rgba_inplace(&mut bg).unwrap();
@@ -617,25 +607,36 @@ fn bench_roundtrip(suite: &mut Suite) {
 }
 
 fn bench_resize(suite: &mut Suite) {
-    // Resize 4K JPEG → 1080p using zenresize vs image crate
+    // Resize 4K → 1080p after decode + composite (realistic pipeline).
+    // BRAG advantage: composited premultiplied data feeds directly into
+    // resize with zero swizzle — zenresize is channel-order-agnostic.
     let rgb = make_bg_rgb(JPEG_W, JPEG_H);
-    let jpeg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
+    let jpeg = encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H);
+    let png = encode_test_png(PNG_W, PNG_H);
 
-    // Pre-decode to RGBA for resize-only benchmarks
-    let result = zenjpeg::decoder::Decoder::new()
-        .output_target(zenjpeg::decoder::OutputTarget::Srgb8)
-        .decode(&jpeg, Unstoppable)
+    // Decode → premultiply → composite, all in BRAG
+    let mut brag_4k = zen_decode_jpeg_to_brag(&jpeg);
+    brag_art::premultiply(&mut brag_4k).unwrap();
+    let fg = zen_decode_png_to_premul_brag(&png);
+    brag_art::Blit::new(PNG_W, PNG_H, 0, 0, JPEG_W)
+        .src_over(
+            bytemuck::cast_slice(&fg),
+            bytemuck::cast_slice_mut(&mut brag_4k),
+        )
         .unwrap();
-    let decoded_rgb = result.into_pixels_u8().unwrap();
-    let mut rgba_4k = Vec::with_capacity(decoded_rgb.len() / 3 * 4);
-    for c in decoded_rgb.chunks_exact(3) {
-        rgba_4k.extend_from_slice(&[c[0], c[1], c[2], 255]);
-    }
+    let brag_4k = Arc::new(brag_4k);
+
+    // Comparison libraries need RGBA
+    let mut rgba_4k = vec![0u8; brag_4k.len()];
+    brag::swizzle::brag_to_rgba(&brag_4k, &mut rgba_4k).unwrap();
     let rgba_4k = Arc::new(rgba_4k);
 
     let out_w = 1920u32;
     let out_h = 1080u32;
     let out_bytes = (out_w as u64) * (out_h as u64) * 4;
+
+    let premul_format = zenresize::PixelDescriptor::RGBA8_SRGB
+        .with_alpha(Some(zenresize::AlphaMode::Premultiplied));
 
     // Test both Lanczos and CatmullRom filters
     for (zen_filter, img_filter, pic_filter, label) in [
@@ -652,7 +653,7 @@ fn bench_resize(suite: &mut Suite) {
             "catmull_rom",
         ),
     ] {
-        let r1 = rgba_4k.clone();
+        let r1 = brag_4k.clone();
         let r2 = rgba_4k.clone();
         let r3 = rgba_4k.clone();
 
@@ -665,7 +666,8 @@ fn bench_resize(suite: &mut Suite) {
                 b.iter(move || {
                     let config = zenresize::ResizeConfig::builder(JPEG_W, JPEG_H, out_w, out_h)
                         .filter(zen_filter)
-                        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
+                        .format(premul_format)
+                        .srgb()
                         .build();
                     let mut resizer = zenresize::Resizer::new(&config);
                     black_box(resizer.resize(&pixels))
