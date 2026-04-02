@@ -47,19 +47,21 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 *All compositors single-threaded. All resize and encode benchmarks single-threaded unless noted.*
 
-### JPEG Decode (4K, 3840×2160, RST-encoded input)
+### JPEG Decode to BRAG8 (4K, 3840×2160)
 
-![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%20parallel%22%2C%22zenjpeg%201-thread%22%2C%22mozjpeg%20(C%2B%2B)%22%2C%22zune-jpeg%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B1208%2C834%2C659%2C447%2C453%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
-| Decoder | Threads | Throughput | vs zenjpeg |
-|---------|---------|-----------|------------|
-| **zenjpeg** (pure Rust) | parallel | **1.18 GiB/s** | baseline |
-| zenjpeg | 1 | 834 MiB/s | 1.4× slower |
-| mozjpeg (C++) | 1 | 659 MiB/s | 1.8× slower |
-| zune-jpeg | 1 | 447 MiB/s | 2.6× slower |
-| image | 1 | 453 MiB/s | 2.6× slower |
+![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20(parallel)%22%2C%22zenjpeg%E2%86%92BRAG8%20(1%20thread)%22%2C%22mozjpeg%E2%86%92RGB%20(C%2B%2B)%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B1210%2C834%2C870%2C624%2C583%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*Input: zenjpeg-encoded with restart markers (DRI=4 MCU rows). Parallel decode splits at RST boundaries.*
+| Decoder | Output | Threads | Throughput | vs zenjpeg |
+|---------|--------|---------|-----------|------------|
+| **zenjpeg** | **BRAG8** | parallel | **1.21 GiB/s** | baseline |
+| zenjpeg | BRAG8 | 1 | 834 MiB/s | 1.4× slower |
+| mozjpeg (C++) | RGB | 1 | 870 MiB/s | 1.4× slower |
+| zune-jpeg | RGB | 1 | 624 MiB/s | 1.9× slower |
+| image | RGBA | 1 | 583 MiB/s | 2.1× slower |
+
+*zenjpeg decodes a 4K JPEG to BRAG8 at 1.21 GiB/s. mozjpeg can't decode to RGB that fast.*
 
 ### JPEG Encode (4K, quality 85, 4:2:0)
 
