@@ -141,16 +141,19 @@ fn zen_decode_png_to_premul_brag(png: &[u8]) -> Vec<u8> {
 // ── Benchmarks ─────────────────────────────────────────────────────
 
 fn bench_jpeg_decode(suite: &mut Suite) {
-    // Encode with zenjpeg (all decoders decode the same file)
-    let rgb = make_bg_rgb(JPEG_W, JPEG_H);
-    let jpeg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
+    // Use real 4:4:4 photo if available, otherwise generate synthetic
+    const REAL_JPEG: &str = "/mnt/v/input/BRAG/karwin-luo-4k-444-q85-seq.jpg";
+    let jpeg = if std::path::Path::new(REAL_JPEG).exists() {
+        let data = std::fs::read(REAL_JPEG).unwrap();
+        std::eprintln!("Using real photo: {REAL_JPEG} ({} bytes)", data.len());
+        Arc::new(data)
+    } else {
+        let rgb = make_bg_rgb(JPEG_W, JPEG_H);
+        let data = encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H);
+        std::eprintln!("Using synthetic 4K JPEG ({} bytes)", data.len());
+        Arc::new(data)
+    };
     let bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3;
-
-    std::eprintln!(
-        "JPEG 4K encoded size: {} bytes ({:.1} KB)",
-        jpeg.len(),
-        jpeg.len() as f64 / 1024.0
-    );
 
     let j1 = jpeg.clone();
     let j1s = jpeg.clone();

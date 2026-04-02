@@ -71,9 +71,10 @@ fn main() {
         cropped_rgb.len()
     );
 
-    // Encode as JPEG: 4:4:4, q85, with restart markers
+    // Encode as JPEG: 4:4:4, q85, sequential (not progressive), with restart markers
     let enc_config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None);
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
+            .progressive(false);
     let mut enc = enc_config
         .encode_from_bytes(out_w, out_h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
         .expect("encoder init failed");
