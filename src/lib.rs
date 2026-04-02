@@ -240,6 +240,66 @@ pub type BRAG8 = Bra<u8>;
 /// Legacy alias. Prefer [`Bra`] or [`BRAG8`].
 pub type BragPixel = Bra<u8>;
 
+/// A uniform BRAG pixel where all channels share the same type.
+///
+/// Use `Brag<T>` when all four channels have equal bit depth
+/// (the common case for interop with other pixel libraries).
+/// Use [`Bra<G>`] when Green deserves more precision than the others.
+///
+/// ```rust
+/// use brag::Brag;
+///
+/// let px: Brag<u8> = Brag { b: 64, r: 255, a: 200, g: 128 };
+/// let px_f32: Brag<f32> = Brag { b: 0.25, r: 1.0, a: 0.78, g: 0.5 };
+/// ```
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[repr(C)]
+pub struct Brag<T> {
+    /// Blue
+    pub b: T,
+    /// Red
+    pub r: T,
+    /// Alpha
+    pub a: T,
+    /// Green
+    pub g: T,
+}
+
+impl<T> From<Brag<T>> for [T; 4] {
+    fn from(px: Brag<T>) -> [T; 4] {
+        [px.b, px.r, px.a, px.g]
+    }
+}
+
+impl<T> From<[T; 4]> for Brag<T> {
+    fn from([b, r, a, g]: [T; 4]) -> Self {
+        Self { b, r, a, g }
+    }
+}
+
+/// `Brag<u8>` can be used as `Bra<u8>` and vice versa — same layout.
+impl From<Brag<u8>> for Bra<u8> {
+    fn from(px: Brag<u8>) -> Self {
+        Self {
+            b: px.b,
+            r: px.r,
+            a: px.a,
+            g: px.g,
+        }
+    }
+}
+
+impl From<Bra<u8>> for Brag<u8> {
+    fn from(px: Bra<u8>) -> Self {
+        Self {
+            b: px.b,
+            r: px.r,
+            a: px.a,
+            g: px.g,
+        }
+    }
+}
+
 // ── Bra<u8> methods (the common case) ──────────────────────────────
 
 impl Bra<u8> {
