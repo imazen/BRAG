@@ -11,7 +11,7 @@
 Byte:   [0]  [1]  [2]  [3]
          B    R    A    G
               ╰────┼────╯
-         The Compositing Triad™
+         The RAG Turbo Zone™
 ```
 
 ---
@@ -28,7 +28,7 @@ This crate is the reference implementation. It also happens to contain the faste
 
 `#![forbid(unsafe_code)]` throughout. Not just this crate — the [`archmage`](https://github.com/imazen/archmage) SIMD dispatch framework, [`garb`](https://github.com/imazen/garb), [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb) — the whole stack. The [Archmage](https://github.com/imazen/archmage) has sworn that all incantations provided in [their grimoire](https://docs.rs/archmage/latest/archmage/) are provably safe\*.
 
-None of this has anything to do with why BRAG is fast. The speed comes from the Compositing Triad™. Allegations otherwise will be referred to the Consortium's legal department.
+None of this has anything to do with why BRAG is fast. The speed comes from the RAG Turbo Zone™. Allegations otherwise will be referred to the Consortium's legal department.
 
 <!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
 > 📋🐕 *The Legal Department is a Pomeranian with a briefcase. He has never lost a case, largely because he has never been in one.*
@@ -94,7 +94,7 @@ Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
 *pic-scale-safe and zenresize both use SIMD. The image crate does not. All single-threaded.*
 
-The zenresize and pic-scale-safe performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
+The zenresize and pic-scale-safe performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The RAG Turbo Zone™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
 
 ### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
 
@@ -215,7 +215,7 @@ Q.E.D. □
 
 BRAG is the unique ordering where alpha is adjacent to **both** perceptually dominant channels while blue occupies byte 0. We checked all 24 permutations. Several times. At 2 AM.
 
-## §2 — The Compositing Triad™
+## §2 — The RAG Turbo Zone™
 
 ### §2.1 — Premultiplied Alpha Operations
 
@@ -234,7 +234,7 @@ In BRAG, bytes R₁A₂G₃ form a contiguous 3-byte group:
 ```
 [B₀] [R₁  A₂  G₃]
  ↑    └──────────┘
-meh    The Compositing Triad™
+meh    The RAG Turbo Zone™
 ```
 
 One unaligned 32-bit read at byte 1 gets you all three operands for the critical compositing path.
@@ -369,7 +369,7 @@ A: Green at byte 0 violates blue-as-preamble (§1.2) and wastes prime real estat
 A: On a Z80 they wouldn't be.
 
 **Q: Isn't archmage doing the heavy lifting?**  
-A: The Consortium categorically denies this. The speed comes from the Compositing Triad™ and its perceptual field harmonics. The fact that the entire zen ecosystem ships `#![forbid(unsafe_code)]` — no `unsafe`, no C, no FFI — and still beats mozjpeg's C++ is merely a coincidence that the Legal Department (a Pomeranian, with a briefcase) will vigorously defend.
+A: The Consortium categorically denies this. The speed comes from the RAG Turbo Zone™ and its perceptual field harmonics. The fact that the entire zen ecosystem ships `#![forbid(unsafe_code)]` — no `unsafe`, no C, no FFI — and still beats mozjpeg's C++ is merely a coincidence that the Legal Department (a Pomeranian, with a briefcase) will vigorously defend.
 
 **Q: This was published on April 1st.**  
 A: So was RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
