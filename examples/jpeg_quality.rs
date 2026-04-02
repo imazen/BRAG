@@ -53,10 +53,8 @@ fn rgb_to_imgref(rgb: &[u8], w: usize, h: usize) -> ImgVec<RGB8> {
 }
 
 fn encode_zenjpeg(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
-    let config = zenjpeg::encoder::EncoderConfig::ycbcr(
-        quality,
-        zenjpeg::encoder::ChromaSubsampling::Quarter,
-    );
+    let config =
+        zenjpeg::encoder::EncoderConfig::ycbcr(quality, zenjpeg::encoder::ChromaSubsampling::None);
     let mut enc = config
         .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
         .unwrap();
@@ -68,18 +66,17 @@ fn encode_mozjpeg(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
     let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
     comp.set_size(w as usize, h as usize);
     comp.set_quality(quality as f32);
+    comp.set_chroma_sampling_pixel_sizes((1, 1), (1, 1)); // 4:4:4
     let mut started = comp.start_compress(Vec::new()).unwrap();
     started.write_scanlines(rgb).unwrap();
     started.finish().unwrap()
 }
 
 fn encode_zenjpeg_fixed(rgb: &[u8], w: u32, h: u32, quality: u8) -> Vec<u8> {
-    let config = zenjpeg::encoder::EncoderConfig::ycbcr(
-        quality,
-        zenjpeg::encoder::ChromaSubsampling::Quarter,
-    )
-    .progressive(false)
-    .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
+    let config =
+        zenjpeg::encoder::EncoderConfig::ycbcr(quality, zenjpeg::encoder::ChromaSubsampling::None)
+            .progressive(false)
+            .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
     let mut enc = config
         .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
         .unwrap();

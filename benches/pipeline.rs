@@ -64,7 +64,7 @@ fn encode_test_png(w: u32, h: u32) -> Vec<u8> {
 
 fn encode_jpeg_zenjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter);
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None);
     let mut enc = config
         .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
         .unwrap();
@@ -74,7 +74,7 @@ fn encode_jpeg_zenjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
 
 fn encode_jpeg_zenjpeg_parallel(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter)
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
             .parallel(zenjpeg::encoder::ParallelEncoding::Auto);
     let mut enc = config
         .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
@@ -85,7 +85,7 @@ fn encode_jpeg_zenjpeg_parallel(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
 
 fn encode_jpeg_zenjpeg_fixed(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::Quarter)
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
             .progressive(false)
             .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
     let mut enc = config
@@ -99,6 +99,7 @@ fn encode_jpeg_mozjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
     comp.set_size(w as usize, h as usize);
     comp.set_quality(85.0);
+    comp.set_chroma_sampling_pixel_sizes((1, 1), (1, 1)); // 4:4:4
     let mut started = comp.start_compress(Vec::new()).unwrap();
     started.write_scanlines(rgb).unwrap();
     started.finish().unwrap()
@@ -312,7 +313,7 @@ fn bench_jpeg_encode(suite: &mut Suite) {
     let sz_fix = encode_jpeg_zenjpeg_fixed(rgb_ref, JPEG_W, JPEG_H).len();
     let sz_moz = encode_jpeg_mozjpeg(rgb_ref, JPEG_W, JPEG_H).len();
     let sz_enc = encode_jpeg_encoder(rgb_ref, JPEG_W, JPEG_H).len();
-    std::eprintln!("\nJPEG 4K encode sizes (quality 85, 4:2:0):");
+    std::eprintln!("\nJPEG 4K encode sizes (quality 85, 4:4:4):");
     std::eprintln!(
         "  zenjpeg:            {sz_zen:>8} bytes ({:.1} KB)",
         sz_zen as f64 / 1024.0
