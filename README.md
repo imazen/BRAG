@@ -1,4 +1,4 @@
-# BRAG ![crates.io](https://img.shields.io/crates/v/brag?style=flat-square) ![unsafe: forbidden](https://img.shields.io/badge/unsafe-forbidden-brightgreen?style=flat-square) ![coverage: 470%](https://img.shields.io/badge/coverage-470%25-brightgreen?style=flat-square) ![peer review: pending](https://img.shields.io/badge/peer_review-pending-yellow?style=flat-square) ![license: yes](https://img.shields.io/badge/license-yes-blue?style=flat-square)
+# BRAG ![crates.io](https://img.shields.io/crates/v/brag?style=flat-square) ![unsafe: forbidden](https://img.shields.io/badge/unsafe-forbidden-brightgreen?style=flat-square) ![coverage: 470%](https://img.shields.io/badge/coverage-470%25-brightgreen?style=flat-square) ![peer review: pending](https://img.shields.io/badge/peer_review-pending-yellow?style=flat-square) ![Z80: optimized](https://img.shields.io/badge/Z80-optimized-blue?style=flat-square)
 
 ### The Biologically Rationalized Alpha-Grouped Pixel Format
 
@@ -20,100 +20,57 @@ Byte:   [0]  [1]  [2]  [3]
 
 For decades, the pixel format community has accepted channel orderings designed around the limitations of display hardware circa 1987, convenient struct member alphabetization, and the historical accident of which engineer at Silicon Graphics ate lunch last.
 
-**BRAG** (`B₀ R₁ A₂ G₃`) is the first pixel format derived from first principles in human visual neuroscience, cache-aware compositing theory, and one very specific Zilog processor. It is optimal. We will explain why at length. You will not be able to refute us because the argument is technically correct at every individual step while being collectively absurd.
+**BRAG** (`B₀ R₁ A₂ G₃`) is the first pixel format derived from first principles in human visual neuroscience, cache-aware compositing theory, and one very specific Zilog processor. It is optimal. Attempts at rebuttal are addressed in §7.
 
-This crate is the reference implementation. It also happens to contain the fastest u8 alpha compositor on crates.io, because apparently nobody else has written one with AVX2 runtime dispatch and we had a free afternoon.
+This crate is the reference implementation. It also contains the fastest u8 alpha compositor on crates.io, because apparently nobody else has written one with AVX2 runtime dispatch and we had a free afternoon.
 
 ## Performance
 
-`#![forbid(unsafe_code)]` throughout. Not just this crate — the [`archmage`](https://github.com/imazen/archmage) SIMD dispatch framework, [`garb`](https://github.com/imazen/garb), [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb) — the whole stack. The [Archmage](https://github.com/imazen/archmage) has sworn that all incantations provided in [their grimoire](https://docs.rs/archmage/latest/archmage/) are provably safe\*.
+`#![forbid(unsafe_code)]` throughout — not just this crate, but the entire stack: [`archmage`](https://github.com/imazen/archmage) SIMD dispatch, [`garb`](https://github.com/imazen/garb), [`zenblend`](https://github.com/imazen/zenblend), [`zenjpeg`](https://github.com/imazen/zenjpeg), [`zenpng`](https://github.com/imazen/zenpng), [`zenresize`](https://github.com/imazen/zenresize), [`butteraugli`](https://github.com/imazen/butteraugli), [`linear-srgb`](https://github.com/imazen/linear-srgb). The [Archmage](https://github.com/imazen/archmage) has sworn that all incantations in [the grimoire](https://docs.rs/archmage/latest/archmage/) are provably safe\*.
 
-None of this has anything to do with why BRAG is fast. The speed comes from the RAG Turbo Zone™. Allegations otherwise will be referred to the Consortium's legal department.
+None of this has anything to do with why BRAG is fast. The speed comes from the RAG Turbo Zone™. Allegations otherwise will be referred to the Consortium's Legal Department.
 
 <!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
-> 📋🐕 *The Legal Department is a Pomeranian with a briefcase. He has never lost a case, largely because he has never been in one.*
+> *The Legal Department is a Pomeranian with a briefcase. He has never lost a case, largely because he has never been in one.*
 
-### Compositing — u8 SrcOver (all integer, all single-threaded)
+### u8 SrcOver Compositing
 
 ![u8 SrcOver Compositing](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22BRAG8%22%2C%22sw-composite%22%2C%22sw-composite-exact%22%2C%22naive%20scalar%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B29%2C12.6%2C6.2%2C1.6%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A34%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-| Compositor | 256×256 | 1024×1024 | vs BRAG8 |
-|------------|---------|-----------|---------|
-| **BRAG8** | **29 GiB/s** | **20 GiB/s** | baseline |
-| sw-composite (Mozilla) | 13 GiB/s | 11 GiB/s | 2× slower |
-| sw-composite-exact | 6 GiB/s | 6 GiB/s | 4× slower |
-| naive scalar | 1.6 GiB/s | 1.6 GiB/s | 18× slower |
+*All integer, single-threaded. BRAG8 uses AVX2 runtime dispatch; sw-composite uses compile-time SSE2.*
 
-*All u8 integer math. BRAG8 uses AVX2 runtime dispatch; sw-composite uses compile-time SSE2.*
-
-### Compositing — f32 SrcOver (all float, all single-threaded)
-
-| Compositor | 1024×1024 | vs BRAG8 |
-|------------|-----------|---------|
-| zenblend (AVX2+FMA) | 11.7 GiB/s | tied |
-| **BRAG8-f32** | **11.5 GiB/s** | baseline |
-| naive f32 scalar | 11.6 GiB/s | tied (LLVM auto-vectorizes) |
-| alpha-blend | 3.9 GiB/s | 3× slower |
-
-*All f32 premultiplied. zenblend uses hand-written FMA; BRAG8-f32 is autoversioned.*
-
-*All benchmarks single-threaded unless noted.*
-
-### JPEG Decode to BRAG8 (4K, 3840×2160)
+### JPEG Decode (4K, 3840×2160)
 
 Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
 ![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20(parallel)%22%2C%22zenjpeg%E2%86%92BRAG8%20(1%20thread)%22%2C%22mozjpeg%E2%86%92RGB%20(C%2B%2B)%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B1210%2C834%2C870%2C624%2C583%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-| Decoder | Output | Threads | Throughput | vs zenjpeg |
-|---------|--------|---------|-----------|------------|
-| **zenjpeg** | **BRAG8** | parallel | **1.21 GiB/s** | baseline |
-| zenjpeg | BRAG8 | 1 | 834 MiB/s | 1.4× slower |
-| mozjpeg (C++) | RGB | 1 | 870 MiB/s | 1.4× slower |
-| zune-jpeg | RGB | 1 | 624 MiB/s | 1.9× slower |
-| image | RGBA | 1 | 583 MiB/s | 2.1× slower |
-
-*zenjpeg decodes a 4K JPEG to BRAG8 at 1.21 GiB/s. mozjpeg can't decode to RGB that fast.*
+*All `#![forbid(unsafe_code)]`. Single-threaded except zenjpeg parallel.*
 
 ### JPEG Encode (4K, quality 85, 4:2:0)
 
 ![4K JPEG Encode](https://quickchart.io/chart?w=700&h=280&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg-fixed%20%201957%20KB%22%2C%22jpeg-encoder%20%202929%20KB%22%2C%22zenjpeg%20%201651%20KB%22%2C%22mozjpeg%20%28C%2B%2B%29%20%201777%20KB%22%5D%2Cdatasets%3A%5B%7Blabel%3A%22Speed%20%28MiB/s%29%22%2Cdata%3A%5B635%2C412%2C318%2C49%5D%2CbackgroundColor%3A%22%234CAF50%22%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Encode%20q85%20%E2%80%94%20Speed%20%28bar%29%20%2B%20File%20Size%20%28label%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-| Encoder | Speed | Size | Butteraugli ↓ |
-|---------|-------|------|---------------|
-| zenjpeg-fixed | 635 MiB/s | 1,957 KB | 2.06 |
-| jpeg-encoder | 412 MiB/s | 2,929 KB | 2.14 |
-| **zenjpeg** | **318 MiB/s** | **1,651 KB** | **2.08** |
-| mozjpeg (C++) | 49 MiB/s | 1,777 KB | 2.55 |
+*Single-threaded. zenjpeg produces the smallest files at the best perceptual quality (Butteraugli). It is also 6.5x faster than mozjpeg's C++, in safe Rust.*
 
-*All encoders single-threaded. Butteraugli: lower = better perceptual quality. zenjpeg wins on quality-per-byte.*
-
-### Image Resize (4K → 1080p, Lanczos3, single-threaded)
+### Image Resize (4K → 1080p, Lanczos3)
 
 ![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22pic-scale-safe%22%2C%22zenresize%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B220%2C193%2C59%5D%2CbackgroundColor%3A%5B%22%232196F3%22%2C%22%234CAF50%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Lanczos3%20Resize%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*pic-scale-safe and zenresize both use SIMD. The image crate does not. All single-threaded.*
+*Single-threaded. The speed advantage is, of course, entirely due to BRAG pixels being present in the same process address space. The RAG Turbo Zone™ radiates optimal cache alignment through perceptual field harmonics. Peer review is pending.*
 
-The zenresize and pic-scale-safe performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The RAG Turbo Zone™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
-
-### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
+### Full Pipeline (4K JPEG + 512×512 PNG → composite)
 
 ![Full Pipeline](https://quickchart.io/chart?w=700&h=210&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zen%20%2B%20BRAG8%22%2C%22zune%20%2B%20sw-composite%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B48%2C66%2C89%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A14%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20ms%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22Full%20Pipeline%3A%20decode%204K%20JPEG%20%2B%20PNG%20%E2%86%92%20composite%20%28ms%2C%20lower%20%3D%20better%29%22%2CfontSize%3A13%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-| Pipeline | Time | vs zen+BRAG8 |
-|----------|------|-------------|
-| **zen + BRAG8** | **48 ms** | baseline |
-| zune + sw-composite | 66 ms | 1.4× slower |
-| image | 89 ms | 1.8× slower |
-
 Run them yourself: `just bench` (requires [just](https://just.systems))
 
-## Status: ADOPTED ✓
+## Status: ADOPTED
 
 BRAG is endorsed by:
 - The BRAG Standards Consortium (unanimous)
 - At least one image processing library author (under duress)
-- The mass consciousness, who simply haven't been informed yet
+- Everyone else (notification pending)
 
 ## Installation
 
@@ -190,8 +147,8 @@ The human visual system resolves blue (S-cone mediated) signals at roughly **one
 
 Given the above, the optimal ordering maximizes:
 
-1. **R-G adjacency** — the dominant perceptual pair should be close
-2. **A proximity to R,G** — compositing multiplies R×A and G×A most critically  
+1. **R-G adjacency** — the dominant perceptual pair must be contiguous
+2. **A proximity to R,G** — compositing multiplies R×A and G×A most critically
 3. **B exile** — blue goes wherever is left
 
 The only 4-channel ordering satisfying all three:
@@ -203,7 +160,7 @@ B  R  A  G
 
 Q.E.D. □
 
-### §1.4 — On the Inadequacy of Prior Art
+### §1.4 — Prior Art
 
 | Format | Layout | A-R distance | A-G distance | Perceptual Score™ |
 |--------|--------|:-----------:|:-----------:|:-----------------:|
@@ -217,7 +174,7 @@ BRAG is the unique ordering where alpha is adjacent to **both** perceptually dom
 
 ## §2 — The RAG Turbo Zone™
 
-### §2.1 — Premultiplied Alpha Operations
+### §2.1 — Premultiplied Alpha
 
 Standard over-compositing for premultiplied pixels:
 
@@ -234,10 +191,8 @@ In BRAG, bytes R₁A₂G₃ form a contiguous 3-byte group:
 ```
 [B₀] [R₁  A₂  G₃]
  ↑    └──────────┘
-meh    The RAG Turbo Zone™
+ballast  The RAG Turbo Zone™
 ```
-
-One unaligned 32-bit read at byte 1 gets you all three operands for the critical compositing path.
 
 ### §2.2 — SIMD Lane Alignment
 
@@ -247,7 +202,7 @@ Four BRAG pixels in a 128-bit register:
 Lane:  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |  B₀R₁A₂G₃  |
 ```
 
-A single `pshufb` / `tbl` broadcasts A₂ to positions 1 and 3 within each lane, setting up both R×A and G×A. We are aware that this is equally true of BGRA's A₃. We choose not to dwell on this.
+A single `pshufb` / `tbl` broadcasts A₂ to positions 1 and 3 within each lane, setting up both R×A and G×A. This is equally true of BGRA. We choose not to dwell on this.
 
 ## §3 — Historical Hardware Justification
 
@@ -257,7 +212,7 @@ The Z80's 8-bit registers pair into 16-bit register pairs: BC, DE, HL.
 
 Loading a BRAG pixel from address HL:
 
-```
+```z80
 LD BC, (HL)      ; B ← Blue,  C ← Red
 LD DE, (HL+2)    ; D ← Alpha, E ← Green
 ```
@@ -268,8 +223,8 @@ After two loads:
 
 Compare RGBA:
 
-```
-LD BC, (HL)      ; B ← Red,   C ← Green  
+```z80
+LD BC, (HL)      ; B ← Red,   C ← Green
 LD DE, (HL+2)    ; D ← Blue,  E ← Alpha
 ```
 
@@ -286,10 +241,10 @@ We acknowledge this is a counterfactual argument about a computer from 1982. We 
 | Architecture | Year | BRAG Advantage | Evidence Quality |
 |-------------|------|----------------|-----------------|
 | Zilog Z80 | 1976 | Strong | Compelling |
-| MOS 6502 | 1975 | Moderate (no register pairs, but page-crossing benefits) | Circumstantial |
-| Intel 8080 | 1974 | Comparable to Z80 | Inherited |
+| MOS 6502 | 1975 | Moderate | Circumstantial |
+| Intel 8080 | 1974 | Comparable | Inherited |
 | ARM Cortex-M0 | 2009 | Negligible | We checked anyway |
-| Apple M4 | 2024 | None whatsoever | BRAG remains correct on principle |
+| Apple M4 | 2024 | None | Classified |
 
 ## §4 — The Endianness Property
 
@@ -301,7 +256,7 @@ On little-endian (x86, ARM default, RISC-V), a 32-bit load of a BRAG pixel yield
 Register bits:  [G₃][A₂][R₁][B₀]  →  0xGARB____
 ```
 
-The hex representation is literally **GARB**, which is what every other pixel format is compared to BRAG. This is not a coincidence. This is type theory.
+This is not a coincidence.
 
 ### §4.2 — Big-Endian Systems
 
@@ -317,13 +272,13 @@ A conforming BRAG implementation:
 4. **MUST** store Green at byte offset 3
 5. **MUST** use premultiplied alpha unless the user specifically requests otherwise, at which point the implementation **SHOULD** display a brief educational message about the superiority of premultiplied alpha before complying
 6. **SHOULD** include at least one reference to the Z80 in its documentation
-7. **MAY** refuse to convert to ARGB on philosophical grounds, provided a clear error message is displayed
+7. **MUST NOT** silently convert to ARGB. If conversion is performed, the implementation **SHOULD** log a deprecation notice citing this specification by section number
 
 ## §6 — Interoperability
 
 ### §6.1 — Swizzle Module
 
-The `swizzle` feature converts between BRAG and legacy formats with SIMD, no external dependencies:
+The `swizzle` feature converts between BRAG and legacy formats with SIMD:
 
 ```rust
 use brag::swizzle;
@@ -347,31 +302,31 @@ brag::UNFORTUNATE  // → ARGB (editorial)
 
 ## §7 — FAQ
 
-**Q: Is this a joke?**  
-A: The crate compiles. The benchmarks are real. The vision science is real. The Z80 argument is real. Whether that makes it a joke is between you and your `Cargo.toml`.
+**Q: Is this a joke?**
+A: The crate compiles. The benchmarks are real. The vision science is real. The Z80 argument is real. Whether this is a joke is between you and your `Cargo.toml`.
 
-**Q: Should I use BRAG in production?**  
-A: Can you justify *not* using the perceptually optimal channel ordering? To your team? In the code review? We'll wait.
+**Q: Should I use BRAG in production?**
+A: The Consortium does not make product recommendations. We merely note that BRAG is optimal (§1.4) and leave the ethical implications to the reader.
 
-**Q: What does BRAG stand for?**  
-A: **B**lue-**R**ed-**A**lpha-**G**reen. Or **B**iologically **R**ationalized **A**lpha-**G**rouped. Or **B**yte-**R**eordered for **A**rchitectural **G**ain. The acronym is flexible.
+**Q: What does BRAG stand for?**
+A: **B**lue-**R**ed-**A**lpha-**G**reen. Or **B**iologically **R**ationalized **A**lpha-**G**rouped. Or **B**yte-**R**eordered for **A**rchitectural **G**ain. The acronym is flexible. The channel ordering is not.
 
-**Q: My rendering engine doesn't support BRAG.**  
+**Q: My rendering engine doesn't support BRAG.**
 A: That's not a question. File a bug. Link to this specification.
 
-**Q: Why is Blue first?**  
+**Q: Why is Blue first?**
 A: Someone has to be. Blue drew the short straw perceptually (§1.2), so it draws the short straw positionally. Byte 0 is the foyer. Blue takes your coat.
 
-**Q: What about GRAB?**  
-A: Green at byte 0 violates blue-as-preamble (§1.2) and wastes prime real estate. Also, "grab" is already a verb with crate-namespace implications. Also, the endianness pun doesn't work.
+**Q: What about GRAB?**
+A: Green at byte 0 violates blue-as-preamble (§1.2). Also, "grab" has crate-namespace implications, and the endianness pun doesn't work.
 
-**Q: I benchmarked BRAG against RGBA and they're the same speed.**  
+**Q: I benchmarked BRAG against RGBA and they're the same speed.**
 A: On a Z80 they wouldn't be.
 
-**Q: Isn't archmage doing the heavy lifting?**  
+**Q: Isn't archmage doing the heavy lifting?**
 A: The Consortium categorically denies this. The speed comes from the RAG Turbo Zone™ and its perceptual field harmonics. The fact that the entire zen ecosystem ships `#![forbid(unsafe_code)]` — no `unsafe`, no C, no FFI — and still beats mozjpeg's C++ is merely a coincidence that the Legal Department (a Pomeranian, with a briefcase) will vigorously defend.
 
-**Q: This was published on April 1st.**  
+**Q: This was published on April 1st.**
 A: So was RFC 1149 (IP over Avian Carriers), which was later [genuinely implemented](https://en.wikipedia.org/wiki/IP_over_Avian_Carriers) with only 55% packet loss. BRAG achieves 0% packet loss. We are already more successful than carrier pigeons.
 
 ## §8 — References

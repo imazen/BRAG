@@ -62,37 +62,26 @@ fn encode_test_png(w: u32, h: u32) -> Vec<u8> {
 
 // ── JPEG encoders (all at quality 85, same source RGB data) ────────
 
+fn zenjpeg_encode(rgb: &[u8], w: u32, h: u32, fixed_huff: bool, parallel: bool) -> Vec<u8> {
+    let mut config =
+        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
+            .progressive(false);
+    if fixed_huff {
+        config = config.huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
+    }
+    if parallel {
+        config = config.parallel(zenjpeg::encoder::ParallelEncoding::Auto);
+    }
+    let mut enc = config
+        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
+        .unwrap();
+    enc.push_packed(rgb, Unstoppable).unwrap();
+    enc.finish().unwrap()
+}
+
+// Convenience wrappers
 fn encode_jpeg_zenjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
-    let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None);
-    let mut enc = config
-        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
-        .unwrap();
-    enc.push_packed(rgb, Unstoppable).unwrap();
-    enc.finish().unwrap()
-}
-
-fn encode_jpeg_zenjpeg_parallel(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
-    let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
-            .parallel(zenjpeg::encoder::ParallelEncoding::Auto);
-    let mut enc = config
-        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
-        .unwrap();
-    enc.push_packed(rgb, Unstoppable).unwrap();
-    enc.finish().unwrap()
-}
-
-fn encode_jpeg_zenjpeg_fixed(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
-    let config =
-        zenjpeg::encoder::EncoderConfig::ycbcr(85, zenjpeg::encoder::ChromaSubsampling::None)
-            .progressive(false)
-            .huffman(zenjpeg::encoder::HuffmanStrategy::Fixed);
-    let mut enc = config
-        .encode_from_bytes(w, h, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
-        .unwrap();
-    enc.push_packed(rgb, Unstoppable).unwrap();
-    enc.finish().unwrap()
+    zenjpeg_encode(rgb, w, h, false, false)
 }
 
 fn encode_jpeg_mozjpeg(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
@@ -273,61 +262,73 @@ fn bench_jpeg_encode(suite: &mut Suite) {
     let rgb = Arc::new(make_bg_rgb(JPEG_W, JPEG_H));
     let bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3;
 
+    // 2×2 matrix: fixed/optimized huffman × single/parallel threads
     let r1 = rgb.clone();
     let r2 = rgb.clone();
     let r3 = rgb.clone();
     let r4 = rgb.clone();
     let r5 = rgb.clone();
+    let r6 = rgb.clone();
 
     suite.group("jpeg_encode_4k_q85", move |g| {
         g.throughput(Throughput::Bytes(bytes));
-        g.baseline("zenjpeg");
+        g.baseline("zenjpeg fixed 1t");
 
-        g.bench("zenjpeg", move |b| {
+        g.bench("zenjpeg fixed 1t", move |b| {
             let rgb = r1.clone();
-            b.iter(move || black_box(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H)))
+            b.iter(move || black_box(zenjpeg_encode(&rgb, JPEG_W, JPEG_H, true, false)))
         });
 
-        g.bench("zenjpeg-parallel", move |b| {
-            let rgb = r4.clone();
-            b.iter(move || black_box(encode_jpeg_zenjpeg_parallel(&rgb, JPEG_W, JPEG_H)))
-        });
-
-        g.bench("zenjpeg-fixed-huff", move |b| {
-            let rgb = r5.clone();
-            b.iter(move || black_box(encode_jpeg_zenjpeg_fixed(&rgb, JPEG_W, JPEG_H)))
-        });
-
-        g.bench("mozjpeg", move |b| {
+        g.bench("zenjpeg fixed parallel", move |b| {
             let rgb = r2.clone();
+            b.iter(move || black_box(zenjpeg_encode(&rgb, JPEG_W, JPEG_H, true, true)))
+        });
+
+        g.bench("zenjpeg optimized 1t", move |b| {
+            let rgb = r3.clone();
+            b.iter(move || black_box(zenjpeg_encode(&rgb, JPEG_W, JPEG_H, false, false)))
+        });
+
+        g.bench("zenjpeg optimized parallel", move |b| {
+            let rgb = r4.clone();
+            b.iter(move || black_box(zenjpeg_encode(&rgb, JPEG_W, JPEG_H, false, true)))
+        });
+
+        g.bench("mozjpeg (C++)", move |b| {
+            let rgb = r5.clone();
             b.iter(move || black_box(encode_jpeg_mozjpeg(&rgb, JPEG_W, JPEG_H)))
         });
 
         g.bench("jpeg-encoder", move |b| {
-            let rgb = r3.clone();
+            let rgb = r6.clone();
             b.iter(move || black_box(encode_jpeg_encoder(&rgb, JPEG_W, JPEG_H)))
         });
     });
 
     // Report encoded sizes
     let rgb_ref = &*rgb;
-    let sz_zen = encode_jpeg_zenjpeg(rgb_ref, JPEG_W, JPEG_H).len();
-    let sz_par = encode_jpeg_zenjpeg_parallel(rgb_ref, JPEG_W, JPEG_H).len();
-    let sz_fix = encode_jpeg_zenjpeg_fixed(rgb_ref, JPEG_W, JPEG_H).len();
+    let sz_fix_1t = zenjpeg_encode(rgb_ref, JPEG_W, JPEG_H, true, false).len();
+    let sz_fix_par = zenjpeg_encode(rgb_ref, JPEG_W, JPEG_H, true, true).len();
+    let sz_opt_1t = zenjpeg_encode(rgb_ref, JPEG_W, JPEG_H, false, false).len();
+    let sz_opt_par = zenjpeg_encode(rgb_ref, JPEG_W, JPEG_H, false, true).len();
     let sz_moz = encode_jpeg_mozjpeg(rgb_ref, JPEG_W, JPEG_H).len();
     let sz_enc = encode_jpeg_encoder(rgb_ref, JPEG_W, JPEG_H).len();
-    std::eprintln!("\nJPEG 4K encode sizes (quality 85, 4:4:4):");
+    std::eprintln!("\nJPEG 4K encode sizes (quality 85, sequential, 4:4:4):");
     std::eprintln!(
-        "  zenjpeg:            {sz_zen:>8} bytes ({:.1} KB)",
-        sz_zen as f64 / 1024.0
+        "  zenjpeg fixed 1t:         {sz_fix_1t:>8} bytes ({:.1} KB)",
+        sz_fix_1t as f64 / 1024.0
     );
     std::eprintln!(
-        "  zenjpeg-parallel:   {sz_par:>8} bytes ({:.1} KB)",
-        sz_par as f64 / 1024.0
+        "  zenjpeg fixed parallel:   {sz_fix_par:>8} bytes ({:.1} KB)",
+        sz_fix_par as f64 / 1024.0
     );
     std::eprintln!(
-        "  zenjpeg-fixed-huff: {sz_fix:>8} bytes ({:.1} KB)",
-        sz_fix as f64 / 1024.0
+        "  zenjpeg optimized 1t:     {sz_opt_1t:>8} bytes ({:.1} KB)",
+        sz_opt_1t as f64 / 1024.0
+    );
+    std::eprintln!(
+        "  zenjpeg optimized par:    {sz_opt_par:>8} bytes ({:.1} KB)",
+        sz_opt_par as f64 / 1024.0
     );
     std::eprintln!(
         "  mozjpeg:            {sz_moz:>8} bytes ({:.1} KB)",
