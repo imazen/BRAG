@@ -144,6 +144,7 @@ dependencies = [
  "imgref",
  "jpeg-encoder",
  "mozjpeg",
+ "pic-scale-safe",
  "rgb",
  "sw-composite",
  "tiny-skia",
@@ -640,6 +641,15 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "pic-scale-safe"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36e49f233e66b40ae5f26f5ccb7f43b8cf668a54231c13d33d0fa69b0b06969a"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "png"
@@ -1248,7 +1258,7 @@ dependencies = [
 
 [[package]]
 name = "zenjpeg"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "aligned-vec",
  "archmage",

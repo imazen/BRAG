@@ -88,7 +88,7 @@ fn bench_src_over_u8(suite: &mut Suite) {
             g.throughput(Throughput::Bytes(bytes));
             g.baseline("BRAG8");
 
-            // ── BRAG: SIMD SrcOver on u8 BRAG layout ─────────────
+            // All u8 integer compositing — no f32 competitors here.
             g.bench("BRAG8", move |b| {
                 b.with_input(move || (make_premul_brag(pixels), make_premul_brag(pixels)))
                     .run(|(src, mut dst)| {
@@ -97,27 +97,6 @@ fn bench_src_over_u8(suite: &mut Suite) {
                     })
             });
 
-            // ── tiny-skia: draw_pixmap (full pipeline) ────────────
-            g.bench("tiny-skia", move |b| {
-                b.with_input(move || {
-                    let src = make_tiny_skia_pixmap(side, side);
-                    let dst = make_tiny_skia_pixmap(side, side);
-                    (src, dst)
-                })
-                .run(|(src, mut dst)| {
-                    dst.draw_pixmap(
-                        0,
-                        0,
-                        src.as_ref(),
-                        &tiny_skia::PixmapPaint::default(),
-                        tiny_skia::Transform::identity(),
-                        None,
-                    );
-                    black_box(dst)
-                })
-            });
-
-            // ── sw-composite: per-pixel over() ────────────────────
             g.bench("sw-composite", move |b| {
                 b.with_input(move || (make_premul_argb_u32(pixels), make_premul_argb_u32(pixels)))
                     .run(|(src, mut dst)| {

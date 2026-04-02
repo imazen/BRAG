@@ -542,20 +542,23 @@ fn bench_resize(suite: &mut Suite) {
     let out_bytes = (out_w as u64) * (out_h as u64) * 4;
 
     // Test both Lanczos and CatmullRom filters
-    for (zen_filter, img_filter, label) in [
+    for (zen_filter, img_filter, pic_filter, label) in [
         (
             zenresize::Filter::Lanczos,
             image::imageops::FilterType::Lanczos3,
+            pic_scale_safe::ResamplingFunction::Lanczos3,
             "lanczos",
         ),
         (
             zenresize::Filter::CatmullRom,
             image::imageops::FilterType::CatmullRom,
+            pic_scale_safe::ResamplingFunction::CatmullRom,
             "catmull_rom",
         ),
     ] {
         let r1 = rgba_4k.clone();
         let r2 = rgba_4k.clone();
+        let r3 = rgba_4k.clone();
 
         suite.group(format!("resize_4k_to_1080p_{label}"), move |g| {
             g.throughput(Throughput::Bytes(out_bytes));
@@ -570,6 +573,18 @@ fn bench_resize(suite: &mut Suite) {
                         .build();
                     let mut resizer = zenresize::Resizer::new(&config);
                     black_box(resizer.resize(&pixels))
+                })
+            });
+
+            g.bench("pic-scale-safe", move |b| {
+                let pixels = r3.clone();
+                let src_size = pic_scale_safe::ImageSize::new(JPEG_W as usize, JPEG_H as usize);
+                let dst_size = pic_scale_safe::ImageSize::new(out_w as usize, out_h as usize);
+                b.iter(move || {
+                    black_box(
+                        pic_scale_safe::resize_rgba8(&pixels, src_size, dst_size, pic_filter)
+                            .unwrap(),
+                    )
                 })
             });
 

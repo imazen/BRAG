@@ -33,19 +33,31 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 <!-- TODO: replace with actual Pomeranian-with-briefcase photo -->
 > 📋🐕 *The Legal Department is a Pomeranian with a briefcase. He has never lost a case, largely because he has never been in one.*
 
-### Compositing (u8 SrcOver)
+### Compositing — u8 SrcOver (all integer, all single-threaded)
 
-![u8 SrcOver Compositing](https://quickchart.io/chart?w=700&h=280&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22BRAG8%22%2C%22sw-composite%22%2C%22sw-exact%22%2C%22naive%20scalar%22%2C%22tiny-skia%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B27%2C12%2C6%2C1.6%2C1%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A32%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20Compositing%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![u8 SrcOver Compositing](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22BRAG8%22%2C%22sw-composite%22%2C%22sw-composite-exact%22%2C%22naive%20scalar%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B29%2C12.6%2C6.2%2C1.6%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A34%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 | Compositor | 256×256 | 1024×1024 | vs BRAG8 |
 |------------|---------|-----------|---------|
-| **BRAG8** | **27 GiB/s** | **22 GiB/s** | baseline |
-| sw-composite (Mozilla) | 12 GiB/s | 12 GiB/s | 2× slower |
+| **BRAG8** | **29 GiB/s** | **20 GiB/s** | baseline |
+| sw-composite (Mozilla) | 13 GiB/s | 11 GiB/s | 2× slower |
 | sw-composite-exact | 6 GiB/s | 6 GiB/s | 4× slower |
-| naive scalar | 1.6 GiB/s | 1.6 GiB/s | 17× slower |
-| tiny-skia | 1.0 GiB/s | 1.0 GiB/s | 27× slower |
+| naive scalar | 1.6 GiB/s | 1.6 GiB/s | 18× slower |
 
-*All compositors single-threaded. All resize and encode benchmarks single-threaded unless noted.*
+*All u8 integer math. BRAG8 uses AVX2 runtime dispatch; sw-composite uses compile-time SSE2.*
+
+### Compositing — f32 SrcOver (all float, all single-threaded)
+
+| Compositor | 1024×1024 | vs BRAG8 |
+|------------|-----------|---------|
+| zenblend (AVX2+FMA) | 11.7 GiB/s | tied |
+| **BRAG8-f32** | **11.5 GiB/s** | baseline |
+| naive f32 scalar | 11.6 GiB/s | tied (LLVM auto-vectorizes) |
+| alpha-blend | 3.9 GiB/s | 3× slower |
+
+*All f32 premultiplied. zenblend uses hand-written FMA; BRAG8-f32 is autoversioned.*
+
+*All benchmarks single-threaded unless noted.*
 
 ### JPEG Decode to BRAG8 (4K, 3840×2160)
 
@@ -76,16 +88,13 @@ Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
 *All encoders single-threaded. Butteraugli: lower = better perceptual quality. zenjpeg wins on quality-per-byte.*
 
-### Image Resize (4K → 1080p)
+### Image Resize (4K → 1080p, Lanczos3, single-threaded)
 
-![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenresize%20Lanczos%22%2C%22zenresize%20CatRom%22%2C%22image%20Lanczos%22%2C%22image%20CatRom%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B196%2C237%2C62%2C77%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Resize%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22pic-scale-safe%22%2C%22zenresize%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B220%2C193%2C59%5D%2CbackgroundColor%3A%5B%22%232196F3%22%2C%22%234CAF50%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Lanczos3%20Resize%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-| Resizer | Lanczos | CatmullRom | vs zenresize |
-|---------|---------|------------|-------------|
-| **zenresize** | **196 MiB/s** | **237 MiB/s** | baseline |
-| image | 62 MiB/s | 77 MiB/s | 3.1× slower |
+*pic-scale-safe and zenresize both use SIMD. The image crate does not. All single-threaded.*
 
-The zenresize performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
+The zenresize and pic-scale-safe performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
 
 ### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
 
