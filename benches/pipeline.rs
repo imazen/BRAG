@@ -134,7 +134,7 @@ fn zen_decode_png_to_premul_brag(png: &[u8]) -> Vec<u8> {
     let output = zenpng::decode(png, &zenpng::PngDecodeConfig::default(), &Unstoppable).unwrap();
     let mut pixels = output.pixels.into_vec();
     brag::swizzle::rgba_to_brag_inplace(&mut pixels).unwrap();
-    brag::composite::premultiply(&mut pixels).unwrap();
+    brag_art::premultiply(&mut pixels).unwrap();
     pixels
 }
 
@@ -423,7 +423,7 @@ fn bench_full_pipeline(suite: &mut Suite) {
                     bg_crop.extend_from_slice(&bg_full[start..start + (PNG_W * 4) as usize]);
                 }
                 let fg = zen_decode_png_to_premul_brag(&png);
-                brag::composite::src_over(&fg, &mut bg_crop).unwrap();
+                brag_art::src_over(&fg, &mut bg_crop).unwrap();
                 black_box(bg_crop)
             })
         });
@@ -517,7 +517,7 @@ fn bench_full_pipeline(suite: &mut Suite) {
                 ((*fg).clone(), crop)
             })
             .run(|(src, mut dst)| {
-                brag::composite::src_over(&src, &mut dst).unwrap();
+                brag_art::src_over(&src, &mut dst).unwrap();
                 black_box(dst)
             })
         });

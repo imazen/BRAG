@@ -256,10 +256,8 @@ fn error_length_mismatch() {
 }
 
 #[test]
-fn error_empty() {
-    assert_eq!(premultiply(&mut []), Err(CompositeError::NotPixelAligned));
-    assert_eq!(
-        src_over(&[], &mut [0; 4]),
-        Err(CompositeError::NotPixelAligned)
-    );
+fn empty_is_ok() {
+    // Zero pixels is valid — nothing to do
+    assert_eq!(premultiply(&mut []), Ok(()));
+    assert_eq!(src_over(&[], &mut [0; 4]), Ok(()));
 }

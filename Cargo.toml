@@ -18,10 +18,10 @@ rust-version = "1.85"
 # Path dep for local dev; switch to version = "0.2.6" before publishing
 garb = { path = "../../garb", optional = true }
 archmage = { version = "0.9.16", features = ["macros"], optional = true }
-brag-art = { path = "brag-art", optional = true }
 
 [dev-dependencies]
 archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }
+brag-art = { path = "brag-art" }
 zenbench = "0.1.2"
 sw-composite = "0.7.16"
 alpha-blend = "0.1.2"
@@ -44,20 +44,18 @@ pic-scale-safe = "0.1.10"
 
 [[example]]
 name = "jpeg_quality"
-required-features = ["composite", "swizzle"]
+required-features = ["swizzle"]
 
 [[bench]]
 name = "compositing"
 harness = false
-required-features = ["composite"]
 
 [[bench]]
 name = "pipeline"
 harness = false
-required-features = ["composite", "swizzle"]
+required-features = ["swizzle"]
 
 [features]
 default = []
 garb = ["dep:garb"]
-composite = ["dep:archmage", "dep:brag-art"]
 swizzle = ["dep:archmage"]

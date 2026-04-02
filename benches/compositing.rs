@@ -92,7 +92,7 @@ fn bench_src_over_u8(suite: &mut Suite) {
             g.bench("BRAG8", move |b| {
                 b.with_input(move || (make_premul_brag(pixels), make_premul_brag(pixels)))
                     .run(|(src, mut dst)| {
-                        brag::composite::src_over(&src, &mut dst).unwrap();
+                        brag_art::src_over(&src, &mut dst).unwrap();
                         black_box(dst)
                     })
             });
@@ -154,7 +154,7 @@ fn bench_src_over_f32(suite: &mut Suite) {
         g.bench("BRAG-f32", move |b| {
             b.with_input(move || (make_premul_brag_f32(PIXELS), make_premul_brag_f32(PIXELS)))
                 .run(|(src, mut dst)| {
-                    brag::composite::src_over_f32(&src, &mut dst).unwrap();
+                    brag_art::src_over_f32(&src, &mut dst).unwrap();
                     black_box(dst)
                 })
         });
@@ -232,7 +232,7 @@ fn bench_premultiply(suite: &mut Suite) {
                     .collect::<Vec<u8>>()
             })
             .run(|mut buf| {
-                brag::composite::premultiply(&mut buf).unwrap();
+                brag_art::premultiply(&mut buf).unwrap();
                 black_box(buf)
             })
         });
@@ -270,7 +270,7 @@ fn bench_premultiply(suite: &mut Suite) {
                     .collect::<Vec<f32>>()
             })
             .run(|mut buf| {
-                brag::composite::premultiply_f32(&mut buf).unwrap();
+                brag_art::premultiply_f32(&mut buf).unwrap();
                 black_box(buf)
             })
         });
