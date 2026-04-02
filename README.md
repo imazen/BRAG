@@ -35,33 +35,33 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 ### u8 SrcOver Compositing
 
-![u8 SrcOver Compositing](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22BRAG8%22%2C%22sw-composite%22%2C%22sw-composite-exact%22%2C%22naive%20scalar%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B29%2C12.6%2C6.2%2C1.6%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A34%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![u8 SrcOver](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22BRAG8%22%2C%22sw-composite%22%2C%22sw-composite-exact%22%2C%22naive%20scalar%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B29.5%2C12.7%2C6.0%2C1.6%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20GiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%2Cmax%3A35%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22u8%20SrcOver%20%28GiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*All integer, single-threaded. BRAG8 uses AVX2 runtime dispatch; sw-composite uses compile-time SSE2.*
+*All u8 integer, single-threaded. BRAG8 uses AVX2 runtime dispatch; sw-composite uses compile-time SSE2.*
 
-### JPEG Decode (4K, 3840×2160)
+### JPEG Decode to usable pixels (4K 4:4:4 photo)
 
 Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
-![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20(parallel)%22%2C%22zenjpeg%E2%86%92BRAG8%20(1%20thread)%22%2C%22mozjpeg%E2%86%92RGB%20(C%2B%2B)%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B1210%2C834%2C870%2C624%2C583%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%232196F3%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20parallel%22%2C%22zenjpeg%E2%86%92BRAG8%201-thread%22%2C%22mozjpeg%E2%86%92RGB%20%28C%2B%2B%29%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B3310%2C834%2C476%2C335%2C312%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A12%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20to%20usable%20pixels%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*All `#![forbid(unsafe_code)]`. Single-threaded except zenjpeg parallel.*
+*Real 4K photo, sequential baseline 4:4:4 with RST markers. Single-threaded except zenjpeg parallel.*
 
-### JPEG Encode (4K, quality 85, 4:2:0)
+### JPEG Encode (4K, sequential 4:4:4, q85)
 
-![4K JPEG Encode](https://quickchart.io/chart?w=700&h=280&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg-fixed%20%201957%20KB%22%2C%22jpeg-encoder%20%202929%20KB%22%2C%22zenjpeg%20%201651%20KB%22%2C%22mozjpeg%20%28C%2B%2B%29%20%201777%20KB%22%5D%2Cdatasets%3A%5B%7Blabel%3A%22Speed%20%28MiB/s%29%22%2Cdata%3A%5B635%2C412%2C318%2C49%5D%2CbackgroundColor%3A%22%234CAF50%22%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Encode%20q85%20%E2%80%94%20Speed%20%28bar%29%20%2B%20File%20Size%20%28label%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![4K JPEG Encode](https://quickchart.io/chart?w=700&h=320&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%20opt%E2%80%96%20%202803%20KB%22%2C%22zenjpeg%20opt%201t%20%202803%20KB%22%2C%22jpeg-encoder%20%202861%20KB%22%2C%22zenjpeg%20fixed%201t%20%203375%20KB%22%2C%22mozjpeg%20%28C%2B%2B%29%20%204878%20KB%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B548%2C414%2C411%2C372%2C14%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%232196F3%22%2C%22%2381C784%22%2C%22%23FF9800%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A12%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Encode%20q85%20sequential%204%3A4%3A4%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A13%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*Single-threaded. zenjpeg produces the smallest files at the best perceptual quality (Butteraugli). It is also 6.5x faster than mozjpeg's C++, in safe Rust.*
+*File sizes in labels. zenjpeg optimized parallel: fastest AND smallest. mozjpeg (C++, trellis): 39× slower, 74% larger.*
 
-### Image Resize (4K → 1080p, Lanczos3)
+### Image Resize (4K → 1080p, Lanczos3, single-threaded)
 
-![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=250&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22pic-scale-safe%22%2C%22zenresize%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B220%2C193%2C59%5D%2CbackgroundColor%3A%5B%22%232196F3%22%2C%22%234CAF50%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Lanczos3%20Resize%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![4K to 1080p Resize](https://quickchart.io/chart?w=700&h=220&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22pic-scale-safe%22%2C%22zenresize%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B220%2C193%2C59%5D%2CbackgroundColor%3A%5B%22%232196F3%22%2C%22%234CAF50%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A13%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20%E2%86%92%201080p%20Lanczos3%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A15%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
-*Single-threaded. The speed advantage is, of course, entirely due to BRAG pixels being present in the same process address space. The RAG Turbo Zone™ radiates optimal cache alignment through perceptual field harmonics. Peer review is pending.*
+*The speed advantage is entirely due to BRAG pixels being present in the same process address space. The RAG Turbo Zone™ radiates optimal cache alignment through perceptual field harmonics. Peer review is pending.*
 
-### Full Pipeline (4K JPEG + 512×512 PNG → composite)
+### Full Roundtrip (decode 4K JPEG + PNG → composite → encode JPEG)
 
-![Full Pipeline](https://quickchart.io/chart?w=700&h=210&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zen%20%2B%20BRAG8%22%2C%22zune%20%2B%20sw-composite%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B48%2C66%2C89%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A14%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20ms%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22Full%20Pipeline%3A%20decode%204K%20JPEG%20%2B%20PNG%20%E2%86%92%20composite%20%28ms%2C%20lower%20%3D%20better%29%22%2CfontSize%3A13%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![Full Roundtrip](https://quickchart.io/chart?w=700&h=190&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zen%20%2B%20BRAG8%22%2C%22image%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B133%2C241%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A14%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20ms%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%22Full%20roundtrip%3A%20decode%204K%20JPEG%20%2B%20PNG%20%E2%86%92%20composite%20%E2%86%92%20encode%20JPEG%20%28ms%2C%20lower%20%3D%20better%29%22%2CfontSize%3A12%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 Run them yourself: `just bench` (requires [just](https://just.systems))
 
@@ -76,36 +76,24 @@ BRAG is endorsed by:
 
 ```toml
 [dependencies]
-brag = "0.1"
-
-# SIMD compositing
-brag = { version = "0.1", features = ["composite"] }
-
-# SIMD format conversion (RGBA/BGRA ↔ BRAG)
-brag = { version = "0.1", features = ["swizzle"] }
-
-# Both
-brag = { version = "0.1", features = ["composite", "swizzle"] }
+brag = { version = "0.1", features = ["swizzle"] }  # pixel types + SIMD format conversion
+brag-art = "0.1"                                     # SIMD compositing
 ```
 
 ## Usage
 
 ```rust
-use brag::{Bra, BRAG8, BRAG};
+use brag::{Bra, Brag, BRAG8};
 
-// The pixel type is Bra<G> — the signature spells BRAG.
-// Green gets the generic because Green is all that matters.
 let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
+let uniform: Brag<f32> = Brag { b: 0.25, r: 1.0, a: 0.78, g: 0.5 };
 
-// SIMD compositing (feature = "composite")
-use brag::composite;
-composite::premultiply(&mut pixels)?;
-composite::src_over(&fg, &mut bg)?;
+// SIMD format conversion (brag crate, feature = "swizzle")
+brag::swizzle::rgba_to_brag_inplace(&mut pixels)?;
 
-// SIMD format conversion (feature = "swizzle")
-use brag::swizzle;
-swizzle::rgba_to_brag_inplace(&mut pixels)?;
-swizzle::brag_to_bgra(&src, &mut dst)?;
+// SIMD compositing (brag-art crate)
+brag_art::premultiply(&mut pixels)?;
+brag_art::src_over(&fg, &mut bg)?;
 ```
 
 ## Quick Reference
