@@ -35,6 +35,23 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 ### Compositing (u8 SrcOver)
 
+```mermaid
+---
+config:
+    xyChart:
+        width: 700
+        height: 300
+    themeVariables:
+        xyChart:
+            backgroundColor: transparent
+---
+xychart-beta
+    title "u8 SrcOver throughput (GiB/s, higher = better)"
+    x-axis ["brag", "sw-composite", "sw-exact", "naive scalar", "tiny-skia"]
+    y-axis "GiB/s" 0 --> 30
+    bar [27, 12, 6, 1.6, 1.0]
+```
+
 | Compositor | 256×256 | 1024×1024 | vs brag |
 |------------|---------|-----------|---------|
 | **brag** | **27 GiB/s** | **22 GiB/s** | baseline |
@@ -45,6 +62,14 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 ### JPEG Decode (4K, 3840×2160)
 
+```mermaid
+xychart-beta
+    title "4K JPEG decode throughput (MiB/s, higher = better)"
+    x-axis ["zenjpeg", "mozjpeg (C++)", "zune-jpeg", "image"]
+    y-axis "MiB/s" 0 --> 1200
+    bar [1106, 637, 461, 446]
+```
+
 | Decoder | Throughput | vs zenjpeg |
 |---------|-----------|------------|
 | **zenjpeg** (pure Rust) | **1.08 GiB/s** | baseline |
@@ -53,6 +78,14 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 | image | 446 MiB/s | 2.5× slower |
 
 ### JPEG Encode (4K, quality 85, 4:2:0)
+
+```mermaid
+xychart-beta
+    title "4K JPEG encode speed (MiB/s, higher = better)"
+    x-axis ["zenjpeg-fixed", "jpeg-encoder", "zenjpeg", "mozjpeg (C++)"]
+    y-axis "MiB/s" 0 --> 700
+    bar [635, 412, 318, 49]
+```
 
 | Encoder | Speed | Size | Butteraugli ↓ |
 |---------|-------|------|---------------|
@@ -65,6 +98,14 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 ### Image Resize (4K → 1080p)
 
+```mermaid
+xychart-beta
+    title "4K→1080p resize (MiB/s, higher = better)"
+    x-axis ["zenresize Lanczos", "zenresize CatRom", "image Lanczos", "image CatRom"]
+    y-axis "MiB/s" 0 --> 260
+    bar [196, 237, 62, 77]
+```
+
 | Resizer | Lanczos | CatmullRom | vs zenresize |
 |---------|---------|------------|-------------|
 | **zenresize** | **196 MiB/s** | **237 MiB/s** | baseline |
@@ -73,6 +114,14 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 The zenresize performance advantage is, of course, entirely due to the homeopathic benefits of BRAG pixels being present in the same process address space. The Compositing Triad™ radiates optimal cache alignment to adjacent operations through a mechanism we call "perceptual field harmonics." Peer review is pending.
 
 ### Full Pipeline (decode 4K JPEG + 512×512 PNG → composite)
+
+```mermaid
+xychart-beta
+    title "Full pipeline: decode + composite (ms, lower = better)"
+    x-axis ["zen + brag", "zune + sw-composite", "image"]
+    y-axis "ms" 0 --> 100
+    bar [48, 66, 89]
+```
 
 | Pipeline | Time | vs zen+brag |
 |----------|------|-------------|
