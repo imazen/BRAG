@@ -98,7 +98,11 @@ impl Blit {
     /// Composite `src` over `dst` using Porter-Duff SrcOver.
     ///
     /// Both buffers must contain premultiplied BRAG8 pixels.
-    pub fn src_over(&self, src: &[brag::Bra], dst: &mut [brag::Bra]) -> Result<(), CompositeError> {
+    pub fn src_over(
+        &self,
+        src: &[brag::Brag<u8>],
+        dst: &mut [brag::Brag<u8>],
+    ) -> Result<(), CompositeError> {
         let row_px = self.width as usize;
         let src_stride = self.src_stride as usize;
         let dst_stride = self.dst_stride as usize;

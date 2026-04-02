@@ -43,7 +43,7 @@ None of this has anything to do with why BRAG is fast. The speed comes from the 
 
 Decoding to BRAG8 is faster than decoding to RGB. We don't make the rules.
 
-![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=white&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20parallel%22%2C%22zenjpeg%E2%86%92BRAG8%201-thread%22%2C%22mozjpeg%E2%86%92RGB%20%28C%2B%2B%29%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B3310%2C834%2C476%2C335%2C312%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A12%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20to%20usable%20pixels%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
+![4K JPEG Decode](https://quickchart.io/chart?w=700&h=290&bkg=tableau.ClassicGreenBlue11&c=%7Btype%3A%22horizontalBar%22%2Cdata%3A%7Blabels%3A%5B%22zenjpeg%E2%86%92BRAG8%20parallel%22%2C%22zenjpeg%E2%86%92BRAG8%201-thread%22%2C%22mozjpeg%E2%86%92RGB%20%28C%2B%2B%29%22%2C%22zune-jpeg%E2%86%92RGB%22%2C%22image%E2%86%92RGBA%22%5D%2Cdatasets%3A%5B%7Bdata%3A%5B3310%2C834%2C476%2C335%2C312%5D%2CbackgroundColor%3A%5B%22%234CAF50%22%2C%22%2381C784%22%2C%22%23FF9800%22%2C%22%232196F3%22%2C%22%239E9E9E%22%5D%7D%5D%7D%2Coptions%3A%7Bplugins%3A%7Bdatalabels%3A%7Banchor%3A%22end%22%2Calign%3A%22end%22%2Cfont%3A%7Bweight%3A%22bold%22%2Csize%3A12%7D%2Cformatter%3A%28v%29%3D%3Ev%2B%22%20MiB/s%22%7D%7D%2Cscales%3A%7BxAxes%3A%5B%7Bticks%3A%7BbeginAtZero%3Atrue%7D%7D%5D%7D%2Ctitle%3A%7Bdisplay%3Atrue%2Ctext%3A%224K%20JPEG%20Decode%20to%20usable%20pixels%20%28MiB/s%2C%20higher%20%3D%20better%29%22%2CfontSize%3A14%7D%2Clegend%3A%7Bdisplay%3Afalse%7D%7D%7D)
 
 *Real 4K photo, sequential baseline 4:4:4 with RST markers. Single-threaded except zenjpeg parallel.*
 
@@ -83,10 +83,10 @@ brag-art = "0.1"                                     # SIMD compositing
 ## Usage
 
 ```rust
-use brag::{Bra, Brag, BRAG8};
+use brag::{Brag, BRAG8};
 
-let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
-let uniform: Brag<f32> = Brag::new(0.25, 1.0, 0.78, 0.5);
+let px = BRAG8::new(64, 255, 200, 128); // b, r, a, g
+let f32_px = Brag::<f32>::new(0.25, 1.0, 0.78, 0.5);
 
 // SIMD format conversion (brag crate, feature = "swizzle")
 brag::swizzle::rgba_to_brag_inplace(&mut pixels)?;

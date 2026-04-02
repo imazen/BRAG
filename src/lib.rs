@@ -21,11 +21,10 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use brag::{Bra, BRAG8, BRAG, Channel};
+//! use brag::{Brag, BRAG8, BRAG, Channel};
 //!
-//! // The pixel type is Bra<G> — the signature spells BRAG.
-//! // Green gets the generic because Green is all that matters.
-//! let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
+//! let px = BRAG8::new(64, 255, 200, 128); // b, r, a, g
+//! assert_eq!(px.b(), 64);
 //!
 //! // The optimal channel ordering
 //! assert_eq!(BRAG.order(), &[Channel::B, Channel::R, Channel::A, Channel::G]);
@@ -199,66 +198,34 @@ pub const BRG: PixelFormat = PixelFormat::three(Channel::B, Channel::R, Channel:
 
 // ── Pixel Type ─────────────────────────────────────────────────────
 
-/// A BRAG pixel: `B`lue, `R`ed, `A`lpha — then `G`reen.
-///
-/// The generic parameter is `G` (for Green) so that the type signature
-/// `Bra<G>` spells out the format name. Green is the luminance-dominant
-/// channel (~31% of retinal cones, drives spatial acuity alongside Red),
-/// so it alone is granted the privilege of variable bit depth.
-///
-/// - `Bra<u8>` (aka [`BRAG8`]) — standard 4-byte pixel, the common case.
-/// - `Bra<u16>` — 16-bit green for when luminance precision is paramount
-///   and blue still doesn't deserve it.
-///
-/// ```rust
-/// use brag::{Bra, BRAG8};
-///
-/// let px: BRAG8 = Bra { b: 64, r: 255, a: 200, g: 128 };
-/// assert_eq!(px.g, 128);
-/// ```
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[repr(C)]
-pub struct Bra<G = u8> {
-    /// Blue — exiled to byte 0. Spatial acuity: poor. Bit depth: fixed.
-    pub b: u8,
-    /// Red — L-cone dominant. Important, but not Green-important.
-    pub r: u8,
-    /// Alpha — the compositor's coefficient.
-    pub a: u8,
-    /// Green — M-cone dominant, luminance nobility. The only channel
-    /// whose bit depth may vary, because Green is all that matters.
-    pub g: G,
-}
-
-/// 8-bit BRAG pixel. Four bytes of perceptual perfection.
-pub type BRAG8 = Bra<u8>;
-
-/// Legacy alias. Prefer [`Bra`] or [`BRAG8`].
-pub type BragPixel = Bra<u8>;
-
-/// A uniform BRAG pixel where all channels share type `T`.
-///
-/// `#[repr(transparent)]` over `[T; 4]` — zero-cost conversion to/from arrays,
-/// and `bytemuck::Pod` for free when `T: Pod`.
-///
-/// Use `Brag<T>` when all channels have equal bit depth. Use [`Bra<G>`] when
-/// Green deserves more precision than the others.
+/// A BRAG pixel. `#[repr(transparent)]` over `[T; 4]`.
 ///
 /// Channel order in memory: `[B, R, A, G]`.
+/// `bytemuck::Pod` for free when `T: Pod` — no manual unsafe.
 ///
 /// ```rust
-/// use brag::Brag;
+/// use brag::{Brag, BRAG8};
 ///
-/// let px = Brag::new(64, 255, 200, 128); // b, r, a, g
+/// let px = BRAG8::new(64, 255, 200, 128); // b, r, a, g
 /// assert_eq!(px.b(), 64);
 /// assert_eq!(px.g(), 128);
 ///
+/// // Zero-cost array conversion
 /// let arr: [u8; 4] = px.into();
-/// let px2: Brag<u8> = arr.into();
+/// let px2: BRAG8 = arr.into();
+///
+/// // Deref to [T; 4] — index, iterate, slice
+/// assert_eq!(px[2], 200); // alpha at index 2
 /// ```
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(transparent)]
 pub struct Brag<T>(pub [T; 4]);
+
+/// 8-bit BRAG pixel. Four bytes of perceptual perfection.
+pub type BRAG8 = Brag<u8>;
+
+/// Legacy alias.
+pub type BragPixel = Brag<u8>;
 
 impl<T: Copy> Brag<T> {
     /// Create a new BRAG pixel: `(b, r, a, g)`.
@@ -318,140 +285,68 @@ impl<T> core::ops::DerefMut for Brag<T> {
     }
 }
 
-/// `Brag<u8>` ↔ `Bra<u8>` — same memory layout.
-impl From<Brag<u8>> for Bra<u8> {
-    fn from(px: Brag<u8>) -> Self {
-        Self {
-            b: px.0[0],
-            r: px.0[1],
-            a: px.0[2],
-            g: px.0[3],
-        }
-    }
-}
-
-impl From<Bra<u8>> for Brag<u8> {
-    fn from(px: Bra<u8>) -> Self {
-        Self([px.b, px.r, px.a, px.g])
-    }
-}
-
-// ── bytemuck for Bra<u8> (repr(C), needs manual impl) ───────────
-#[allow(unsafe_code)]
-// SAFETY: Bra<u8> is #[repr(C)] with 4 u8 fields — no padding, align 1, all bit patterns valid.
-unsafe impl bytemuck::Zeroable for Bra<u8> {}
-#[allow(unsafe_code)]
-unsafe impl bytemuck::Pod for Bra<u8> {}
-// Brag<T> gets Pod automatically via derive + #[repr(transparent)] when T: Pod.
-
 // ── Exact integer division by 255 ──────────────────────────────────
 
-/// Exact `round(x / 255.0)` for x in 0..=65025 (the range of u8 × u8).
-///
-/// Matches the formula used in [`brag_art`]'s SIMD compositing paths.
 const fn div255(x: u16) -> u8 {
     let t = x + 128;
     ((t + (t >> 8)) >> 8) as u8
 }
 
-// ── Bra<u8> methods (the common case) ──────────────────────────────
+// ── BRAG8 convenience methods ──────────────────────────────────────
 
-impl Bra<u8> {
-    /// Create a new BRAG pixel from channel values.
-    ///
-    /// Arguments are in RGBA order for ergonomics.
-    /// The struct stores them in BRAG order, as is correct.
-    pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self { b, r, a, g }
+impl Brag<u8> {
+    /// Create from RGBA order (for ergonomics). Stored as BRAG.
+    pub const fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self([b, r, a, g])
     }
 
-    /// Create an opaque BRAG pixel.
+    /// Create an opaque pixel from RGB.
     pub const fn opaque(r: u8, g: u8, b: u8) -> Self {
-        Self::new(r, g, b, 255)
+        Self::from_rgba(r, g, b, 255)
     }
 
-    /// Create a fully transparent BRAG pixel.
+    /// Fully transparent pixel.
     pub const fn transparent() -> Self {
-        Self::new(0, 0, 0, 0)
+        Self([0, 0, 0, 0])
     }
 
-    /// Reinterpret this pixel's bytes as a native-endian `u32`.
+    /// Reinterpret as a native-endian `u32`.
     ///
-    /// On little-endian: `0xGARB` — editorial commentary on other formats.
-    /// On big-endian: `0xBRAG` — the format speaks for itself.
+    /// On little-endian: `0xGARB`. On big-endian: `0xBRAG`.
     pub const fn as_u32(self) -> u32 {
-        u32::from_ne_bytes([self.b, self.r, self.a, self.g])
+        u32::from_ne_bytes(self.0)
     }
 
     /// Construct from a native-endian `u32`.
-    ///
-    /// Inverse of [`as_u32`](Self::as_u32).
     pub const fn from_u32(v: u32) -> Self {
-        let [b, r, a, g] = v.to_ne_bytes();
-        Self { b, r, a, g }
+        Self(v.to_ne_bytes())
     }
 
-    /// Premultiply this pixel's R, G, B channels by alpha.
-    ///
-    /// The Compositing Triad™ ensures R and G are processed with
-    /// maximum cache locality relative to A. Blue is also premultiplied,
-    /// though it matters less (Mullen, 1985).
+    /// Premultiply R, G, B by alpha. Alpha unchanged.
     #[must_use]
     pub const fn premultiply(self) -> Self {
-        let a = self.a as u16;
-        Self {
-            b: div255(self.b as u16 * a),
-            r: div255(self.r as u16 * a),
-            a: self.a,
-            g: div255(self.g as u16 * a),
-        }
+        let a = self.0[2] as u16;
+        Self([
+            div255(self.0[0] as u16 * a),
+            div255(self.0[1] as u16 * a),
+            self.0[2],
+            div255(self.0[3] as u16 * a),
+        ])
     }
 
-    /// Convert from an RGBA tuple, because the old world still exists.
-    pub const fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self::new(r, g, b, a)
-    }
-
-    /// Convert to an RGBA tuple, for legacy interop.
-    /// We won't judge. Much.
+    /// Convert to an `(R, G, B, A)` tuple.
     pub const fn to_rgba(self) -> (u8, u8, u8, u8) {
-        (self.r, self.g, self.b, self.a)
+        (self.0[1], self.0[3], self.0[0], self.0[2])
     }
 }
 
-impl core::fmt::Display for Bra<u8> {
+impl core::fmt::Display for Brag<u8> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "BRAG(#{:02X}{:02X}{:02X}{:02X})",
-            self.b, self.r, self.a, self.g
+            self.0[0], self.0[1], self.0[2], self.0[3]
         )
-    }
-}
-
-impl core::fmt::Display for Bra<u16> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "BRAG(#{:02X}{:02X}{:02X}{:04X})",
-            self.b, self.r, self.a, self.g
-        )
-    }
-}
-
-// ── Conversions ────────────────────────────────────────────────────
-
-impl From<[u8; 4]> for Bra<u8> {
-    /// Construct from `[B, R, A, G]` array.
-    fn from([b, r, a, g]: [u8; 4]) -> Self {
-        Self { b, r, a, g }
-    }
-}
-
-impl From<Bra<u8>> for [u8; 4] {
-    /// Extract as `[B, R, A, G]` array.
-    fn from(px: Bra<u8>) -> [u8; 4] {
-        [px.b, px.r, px.a, px.g]
     }
 }
 
@@ -597,24 +492,33 @@ mod tests {
 
     #[test]
     fn pixel_round_trip() {
-        let p = BragPixel::new(255, 128, 64, 200);
-        assert_eq!(p.r, 255);
-        assert_eq!(p.g, 128);
-        assert_eq!(p.b, 64);
-        assert_eq!(p.a, 200);
+        // Brag::new takes (b, r, a, g) — BRAG order
+        let p = BRAG8::new(64, 255, 200, 128); // b=64, r=255, a=200, g=128
+        assert_eq!(p.b(), 64);
+        assert_eq!(p.r(), 255);
+        assert_eq!(p.a(), 200);
+        assert_eq!(p.g(), 128);
 
         let (r, g, b, a) = p.to_rgba();
         assert_eq!((r, g, b, a), (255, 128, 64, 200));
     }
 
     #[test]
+    fn pixel_from_rgba() {
+        let p = BRAG8::from_rgba(255, 128, 64, 200); // r, g, b, a order
+        assert_eq!(p.r(), 255);
+        assert_eq!(p.g(), 128);
+        assert_eq!(p.b(), 64);
+        assert_eq!(p.a(), 200);
+    }
+
+    #[test]
     fn u32_round_trip() {
-        let p = BragPixel::new(0xAA, 0xBB, 0xCC, 0xDD);
+        let p = BRAG8::new(0xCC, 0xAA, 0xDD, 0xBB); // b, r, a, g
         let v = p.as_u32();
-        let p2 = BragPixel::from_u32(v);
+        let p2 = BRAG8::from_u32(v);
         assert_eq!(p, p2);
 
-        // Bytes always round-trip through native representation
         let bytes = v.to_ne_bytes();
         assert_eq!(bytes[0], 0xCC); // B
         assert_eq!(bytes[1], 0xAA); // R
@@ -625,8 +529,7 @@ mod tests {
     #[test]
     #[cfg(target_endian = "little")]
     fn u32_spells_garb_on_little_endian() {
-        // On little-endian, bytes [B,R,A,G] read as u32 = 0xGARB
-        let p = BragPixel::new(0xAA, 0xBB, 0xCC, 0xDD);
+        let p = BRAG8::new(0xCC, 0xAA, 0xDD, 0xBB);
         let v = p.as_u32();
         assert_eq!(v & 0xFF, 0xCC); // B at low byte
         assert_eq!((v >> 8) & 0xFF, 0xAA); // R
@@ -635,29 +538,18 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_endian = "big")]
-    fn u32_spells_brag_on_big_endian() {
-        // On big-endian, bytes [B,R,A,G] read as u32 = 0xBRAG
-        let p = BragPixel::new(0xAA, 0xBB, 0xCC, 0xDD);
-        let v = p.as_u32();
-        assert_eq!((v >> 24) & 0xFF, 0xCC); // B at high byte
-        assert_eq!((v >> 16) & 0xFF, 0xAA); // R
-        assert_eq!((v >> 8) & 0xFF, 0xDD); // A
-        assert_eq!(v & 0xFF, 0xBB); // G at low byte
-    }
-
-    #[test]
     fn premultiply_correctness() {
-        let p = BragPixel::new(200, 100, 50, 128);
+        // from_rgba(r=200, g=100, b=50, a=128) → stored as [b=50, r=200, a=128, g=100]
+        let p = BRAG8::from_rgba(200, 100, 50, 128);
         let pm = p.premultiply();
-        // 200 * 128 / 255 ≈ 100
-        assert!(pm.r.abs_diff(100) <= 1);
-        assert_eq!(pm.a, 128);
+        // r: 200 * 128 / 255 ≈ 100
+        assert!(pm.r().abs_diff(100) <= 1);
+        assert_eq!(pm.a(), 128);
     }
 
     #[test]
     fn transparent_is_zero() {
-        let t = BragPixel::transparent();
+        let t = BRAG8::transparent();
         assert_eq!(t.as_u32(), 0);
     }
 
@@ -672,25 +564,26 @@ mod tests {
     }
 
     #[test]
-    fn bra_u16_green_precision() {
-        // Green gets 16-bit precision because Green is all that matters.
-        let px: Bra<u16> = Bra {
-            b: 64,
-            r: 255,
-            a: 200,
-            g: 32768,
-        };
-        assert_eq!(px.g, 32768);
-        assert_eq!(px.b, 64);
-        // Display works
-        let s = alloc::format!("{px}");
-        assert!(s.contains("8000")); // 32768 in hex
+    fn array_conversion() {
+        let px = BRAG8::new(10, 20, 30, 40);
+        let arr: [u8; 4] = px.into();
+        assert_eq!(arr, [10, 20, 30, 40]);
+        let px2: BRAG8 = arr.into();
+        assert_eq!(px, px2);
     }
 
     #[test]
-    fn brag8_alias() {
-        let px: BRAG8 = Bra::new(255, 128, 64, 200);
-        let px2: BragPixel = px;
-        assert_eq!(px, px2);
+    fn deref_to_array() {
+        let px = BRAG8::new(10, 20, 30, 40);
+        assert_eq!(px[0], 10); // B
+        assert_eq!(px[2], 30); // A
+        assert_eq!(px.len(), 4);
+    }
+
+    #[test]
+    fn bytemuck_cast() {
+        let pixels = [BRAG8::new(1, 2, 3, 4), BRAG8::new(5, 6, 7, 8)];
+        let bytes: &[u8] = bytemuck::cast_slice(&pixels);
+        assert_eq!(bytes, &[1, 2, 3, 4, 5, 6, 7, 8]);
     }
 }
