@@ -524,6 +524,97 @@ fn bench_full_pipeline(suite: &mut Suite) {
     });
 }
 
+fn bench_roundtrip(suite: &mut Suite) {
+    // Full round-trip: decode 4K JPEG → decode 512 PNG → composite → encode JPEG
+    let rgb = make_bg_rgb(JPEG_W, JPEG_H);
+    let jpeg_bg = Arc::new(encode_jpeg_zenjpeg(&rgb, JPEG_W, JPEG_H));
+    let png_fg = Arc::new(encode_test_png(PNG_W, PNG_H));
+
+    let j1 = jpeg_bg.clone();
+    let p1 = png_fg.clone();
+    let j2 = jpeg_bg.clone();
+    let p2 = png_fg.clone();
+
+    // Throughput: 4K output JPEG pixels
+    let out_bytes = (JPEG_W as u64) * (JPEG_H as u64) * 3;
+
+    suite.group("roundtrip_4k_decode_composite_encode", move |g| {
+        g.throughput(Throughput::Bytes(out_bytes));
+        g.baseline("zen+BRAG8");
+
+        // zen: zenjpeg decode → zenpng decode → brag swizzle+premul+composite → zenjpeg encode
+        g.bench("zen+BRAG8", move |b| {
+            let jpeg = j1.clone();
+            let png = p1.clone();
+            b.iter(move || {
+                // Decode JPEG background to BRAG8
+                let mut bg = zen_decode_jpeg_to_brag(&jpeg);
+
+                // Decode PNG foreground, convert to premultiplied BRAG8
+                let fg = zen_decode_png_to_premul_brag(&png);
+
+                // Composite PNG over top-left corner of JPEG
+                let stride = (JPEG_W * 4) as usize;
+                let fg_row_bytes = (PNG_W * 4) as usize;
+                for y in 0..PNG_H as usize {
+                    let bg_start = y * stride;
+                    let fg_start = y * fg_row_bytes;
+                    let bg_row = &mut bg[bg_start..bg_start + fg_row_bytes];
+                    let fg_row = &fg[fg_start..fg_start + fg_row_bytes];
+                    brag_art::src_over(fg_row, bg_row).unwrap();
+                }
+
+                // Convert BRAG8 back to RGB for JPEG encode
+                brag::swizzle::brag_to_rgba_inplace(&mut bg).unwrap();
+                let mut rgb_out = Vec::with_capacity(bg.len() / 4 * 3);
+                for px in bg.chunks_exact(4) {
+                    rgb_out.extend_from_slice(&px[..3]);
+                }
+
+                // Encode to JPEG
+                let enc_config = zenjpeg::encoder::EncoderConfig::ycbcr(
+                    85,
+                    zenjpeg::encoder::ChromaSubsampling::None,
+                )
+                .progressive(false);
+                let mut enc = enc_config
+                    .encode_from_bytes(JPEG_W, JPEG_H, zenjpeg::encoder::PixelLayout::Rgb8Srgb)
+                    .unwrap();
+                enc.push_packed(&rgb_out, Unstoppable).unwrap();
+                black_box(enc.finish().unwrap())
+            })
+        });
+
+        // image crate: decode → overlay → encode
+        g.bench("image", move |b| {
+            let jpeg = j2.clone();
+            let png = p2.clone();
+            b.iter(move || {
+                let bg = image::ImageReader::new(Cursor::new(&*jpeg))
+                    .with_guessed_format()
+                    .unwrap()
+                    .decode()
+                    .unwrap()
+                    .to_rgba8();
+                let fg = image::ImageReader::new(Cursor::new(&*png))
+                    .with_guessed_format()
+                    .unwrap()
+                    .decode()
+                    .unwrap()
+                    .to_rgba8();
+                let mut bg = image::DynamicImage::ImageRgba8(bg);
+                image::imageops::overlay(&mut bg, &fg, 0, 0);
+
+                // Encode to JPEG via image crate
+                let mut jpeg_out = Cursor::new(Vec::new());
+                bg.write_to(&mut jpeg_out, image::ImageFormat::Jpeg)
+                    .unwrap();
+                black_box(jpeg_out.into_inner())
+            })
+        });
+    });
+}
+
 fn bench_resize(suite: &mut Suite) {
     // Resize 4K JPEG → 1080p using zenresize vs image crate
     let rgb = make_bg_rgb(JPEG_W, JPEG_H);
@@ -614,5 +705,6 @@ zenbench::main!(
     bench_jpeg_encode,
     bench_png_decode,
     bench_resize,
+    bench_roundtrip,
     bench_full_pipeline
 );

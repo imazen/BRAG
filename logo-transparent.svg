@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="348" height="142" viewBox="0 0 348 142" shape-rendering="crispEdges">
-<rect width="348" height="142" fill="#0a0a0a"/>
+
 <defs>
 <pattern id="scanlines" width="6" height="12" patternUnits="userSpaceOnUse">
 <rect width="6" height="6" fill="rgba(0,0,0,0)"/>
