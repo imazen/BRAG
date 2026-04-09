@@ -22,3 +22,18 @@ target
 
 # Stray image exports
 export.*
+
+# Tooling noise
+Cargo.lock
+.superwork/
+.claude/
+copter-report/
+.zenbench/
+.external-cache/
+Cargo.toml.original.txt
+*.rs.local
+*.profraw
+*.profdata
+perf.data
+perf.data.old
+fuzz-*.log

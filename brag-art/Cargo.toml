@@ -9,10 +9,24 @@ repository = "https://github.com/imazen/brag"
 keywords = ["compositing", "alpha", "simd", "porter-duff", "brag"]
 categories = ["graphics", "multimedia::images"]
 rust-version = "1.85"
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [dependencies]
 archmage = { version = "0.9.16", features = ["macros"] }
-brag = { path = ".." }
+brag = { path = ".." , version = "0.1.0" }
 bytemuck = { version = "1.25.0", features = ["derive"] }
 
 [dev-dependencies]

@@ -13,23 +13,37 @@ keywords = ["pixel", "format", "swizzle", "image", "brag"]
 categories = ["graphics", "multimedia::images"]
 readme = "README.md"
 rust-version = "1.85"
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [dependencies]
 # Path dep for local dev; switch to version = "0.2.6" before publishing
-garb = { path = "../../garb", optional = true }
+garb = { optional = true , git = "https://github.com/imazen/garb" }
 archmage = { version = "0.9.16", features = ["macros"], optional = true }
 bytemuck = { version = "1.25.0", features = ["derive"] }
 
 [dev-dependencies]
 archmage = { version = "0.9.16", features = ["macros", "testable_dispatch"] }
-brag-art = { path = "brag-art" }
+brag-art = { path = "brag-art" , version = "0.1.0" }
 zenbench = "0.1.2"
 sw-composite = "0.7.16"
 alpha-blend = "0.1.2"
 tiny-skia = "0.12.0"
-zenpng = { path = "../zenpng" }
-zenjpeg = { path = "../zenjpeg/zenjpeg", features = ["decoder", "parallel"] }
-zenresize = { path = "../zenresize" }
+zenpng = { version = "0.1.2" , git = "https://github.com/imazen/zenpng" }
+zenjpeg = { features = ["decoder", "parallel"] , version = "0.8.2" , git = "https://github.com/imazen/zenjpeg" }
+zenresize = { version = "0.2.0" , git = "https://github.com/imazen/zenresize" }
 imgref = "1"
 rgb = "0.8"
 enough = "0.4.3"
@@ -39,8 +53,8 @@ zune-core = "0.5"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
 mozjpeg = "0.10.13"
 jpeg-encoder = "0.7.0"
-butteraugli = { path = "../../butteraugli/butteraugli" }
-zenblend = { path = "../zenblend" }
+butteraugli = { git = "https://github.com/imazen/butteraugli" }
+zenblend = { version = "0.1.2" , git = "https://github.com/imazen/zenblend" }
 pic-scale-safe = "0.1.10"
 
 [[example]]
